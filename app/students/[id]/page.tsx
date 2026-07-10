@@ -9,6 +9,7 @@ import { recommendEdgePathways } from "@/lib/recommendations/edge";
 import { EDGE_PATHWAY_LABELS } from "@/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { DocumentUpload } from "./support-plans/DocumentUpload";
 
 const CURRENT_SCHOOL_YEAR = "2026-2027";
 
@@ -100,6 +101,11 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                         </li>
                       ))}
                     </ul>
+                    <DocumentUpload
+                      planId={sp.id}
+                      studentId={student.id}
+                      existingPath={sp.document_url}
+                    />
                   </div>
                 ))}
               </div>
