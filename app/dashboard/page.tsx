@@ -27,6 +27,10 @@ export default async function DashboardPage() {
   const with504 = students.filter((s) => s.has_504).length;
 
   return (
+    <div>
+      <div style={{ background: "red", color: "white", padding: "1rem", fontWeight: "bold" }}>
+        ✅ React is rendering — Tailwind test
+      </div>
     <div className="flex">
       <Sidebar staff={staff} />
       <main className="flex-1 p-8">
@@ -73,6 +77,7 @@ export default async function DashboardPage() {
           </section>
         )}
       </main>
+    </div>
     </div>
   );
 }
