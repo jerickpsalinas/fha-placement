@@ -56,6 +56,45 @@ export async function uploadSupportPlanDocument(
   return {};
 }
 
+/** Create a new support plan record for a student. */
+export async function createSupportPlan(
+  formData: FormData
+): Promise<{ id?: string; error?: string }> {
+  const staff = await getCurrentStaff();
+  if (!["admin", "counselor"].includes(staff.role)) {
+    return { error: "Only admins and counselors may create support plans." };
+  }
+
+  const studentId = formData.get("studentId") as string | null;
+  const planType = formData.get("planType") as string | null;
+  const effectiveDate = (formData.get("effectiveDate") as string) || null;
+  const reviewDate = (formData.get("reviewDate") as string) || null;
+
+  if (!studentId || !planType || !["IEP", "504"].includes(planType)) {
+    return { error: "Student ID and plan type (IEP or 504) are required." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("support_plans")
+    .insert({
+      student_id: studentId,
+      plan_type: planType,
+      effective_date: effectiveDate || null,
+      review_date: reviewDate || null,
+      created_by: staff.id,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    return { error: error?.message ?? "Failed to create support plan." };
+  }
+
+  revalidatePath(`/students/${studentId}`);
+  return { id: data.id };
+}
+
 /** Generate a short-lived signed download URL for a stored document path. */
 export async function getDocumentSignedUrl(
   storagePath: string

@@ -10,6 +10,7 @@ import { EDGE_PATHWAY_LABELS } from "@/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DocumentUpload } from "./support-plans/DocumentUpload";
+import { AddSupportPlan } from "./support-plans/AddSupportPlan";
 
 const CURRENT_SCHOOL_YEAR = "2026-2027";
 
@@ -109,6 +110,9 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                   </div>
                 ))}
               </div>
+            )}
+            {["admin", "counselor"].includes(staff.role) && (
+              <AddSupportPlan studentId={student.id} />
             )}
           </Section>
         )}
