@@ -5,7 +5,7 @@ import { inviteStaffMember, deactivateStaffMember } from "@/app/admin/staff/acti
 import type { StaffProfile } from "@/types";
 
 export default async function ManageStaffPage() {
-  const staff = await requireRole(["admin"]);
+  const staff = await requireRole(["admin", "director"]);
   const supabase = await createClient();
   const { data: allStaff } = await supabase.from("staff_profiles").select("*").order("full_name");
 
@@ -26,6 +26,7 @@ export default async function ManageStaffPage() {
             <input name="full_name" placeholder="Full name" required className="border border-gray-300 rounded px-3 py-2 text-sm" />
             <input name="email" type="email" placeholder="Email" required className="border border-gray-300 rounded px-3 py-2 text-sm" />
             <select name="role" className="border border-gray-300 rounded px-3 py-2 text-sm col-span-2">
+              <option value="director">Director</option>
               <option value="admin">Administrator</option>
               <option value="counselor">Counselor / Advisor</option>
               <option value="teacher">Teacher</option>

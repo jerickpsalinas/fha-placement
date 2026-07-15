@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "PowerShell(npm run *)",
-      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -Last 40)"
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -Last 40)",
+      "PowerShell(gh auth status)"
     ]
   }
 }

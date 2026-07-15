@@ -14,7 +14,7 @@ import type { StaffRole } from "@/types";
  */
 export async function inviteStaffMember(formData: FormData) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin") {
+  if (staff.role !== "admin" && staff.role !== "director") {
     throw new Error("Only an administrator can add staff members.");
   }
 
@@ -47,7 +47,7 @@ export async function inviteStaffMember(formData: FormData) {
 
 export async function deactivateStaffMember(staffId: string) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin") throw new Error("Only an administrator can deactivate staff.");
+  if (staff.role !== "admin" && staff.role !== "director") throw new Error("Only an administrator can deactivate staff.");
   if (staffId === staff.id) throw new Error("You cannot deactivate your own account.");
 
   const supabase = await createServerClient();
@@ -57,7 +57,7 @@ export async function deactivateStaffMember(staffId: string) {
 
 export async function updateStaffRole(staffId: string, role: StaffRole) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin") throw new Error("Only an administrator can change staff roles.");
+  if (staff.role !== "admin" && staff.role !== "director") throw new Error("Only an administrator can change staff roles.");
 
   const supabase = await createServerClient();
   const { error } = await supabase.from("staff_profiles").update({ role }).eq("id", staffId);

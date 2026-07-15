@@ -1,4 +1,4 @@
-export type StaffRole = "admin" | "counselor" | "teacher" | "read_only";
+export type StaffRole = "admin" | "director" | "counselor" | "teacher" | "read_only";
 
 export interface StaffProfile {
   id: string;
