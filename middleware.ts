@@ -35,14 +35,14 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/auth/reset-password");
   const isPublicAsset = request.nextUrl.pathname.startsWith("/_next");
 
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
+
   if (!user && !isAuthRoute && !isPublicAsset) {
-    const redirectUrl = new URL("/login", request.url);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL("/login", origin));
   }
 
   if (user && isAuthRoute) {
-    const redirectUrl = new URL("/dashboard", request.url);
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.redirect(new URL("/dashboard", origin));
   }
 
   return supabaseResponse;
