@@ -29,7 +29,10 @@ export async function inviteStaffMember(formData: FormData) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://staff.fathersharboracademy.com";
+  const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
+  });
   if (inviteError || !invited.user) {
     throw new Error(inviteError?.message ?? "Failed to invite user.");
   }
