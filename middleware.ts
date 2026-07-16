@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isAuthRoute =
+  const isPublicRoute =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/auth/callback") ||
     request.nextUrl.pathname.startsWith("/auth/reset-password");
@@ -37,11 +37,13 @@ export async function middleware(request: NextRequest) {
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin;
 
-  if (!user && !isAuthRoute && !isPublicAsset) {
+  if (!user && !isPublicRoute && !isPublicAsset) {
     return NextResponse.redirect(new URL("/login", origin));
   }
 
-  if (user && isAuthRoute) {
+  // Redirect logged-in users away from /login, but NOT from /auth/reset-password
+  // (they may have clicked a password-reset email while already logged in)
+  if (user && request.nextUrl.pathname.startsWith("/login")) {
     return NextResponse.redirect(new URL("/dashboard", origin));
   }
 

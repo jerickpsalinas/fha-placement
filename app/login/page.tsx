@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +18,15 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const urlError = searchParams.get("error");
+    if (urlError && urlError !== "auth") {
+      setError(urlError);
+    } else if (urlError === "auth") {
+      setError("Authentication failed. Please try again or request a new link.");
+    }
+  }, [searchParams]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -45,7 +55,7 @@ export default function LoginPage() {
     setResetLoading(true);
 
     const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: "https://staff.fathersharboracademy.com/auth/callback?next=/auth/reset-password",
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
     });
 
     setResetLoading(false);
