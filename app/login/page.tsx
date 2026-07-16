@@ -45,7 +45,7 @@ export default function LoginPage() {
     setResetLoading(true);
 
     const { error: resetErr } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-      redirectTo: "https://staff.fathersharboracademy.com/auth/callback",
+      redirectTo: "https://staff.fathersharboracademy.com/auth/callback?next=/auth/reset-password",
     });
 
     setResetLoading(false);
