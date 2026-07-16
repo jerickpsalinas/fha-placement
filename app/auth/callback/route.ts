@@ -9,10 +9,9 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // Recovery tokens carry ?type=recovery — send user to set their password.
-      // Invite tokens (type=invite or absent) go straight to /dashboard.
       const type = searchParams.get("type");
-      const destination = type === "recovery" ? "/auth/reset-password" : "/dashboard";
+      const needsPasswordSet = type === "recovery" || type === "invite";
+      const destination = needsPasswordSet ? "/auth/reset-password" : "/dashboard";
       return NextResponse.redirect(new URL(destination, origin));
     }
   }
