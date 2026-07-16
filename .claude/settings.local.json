@@ -3,7 +3,11 @@
     "allow": [
       "PowerShell(npm run *)",
       "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -Last 40)",
-      "PowerShell(gh auth status)"
+      "PowerShell(gh auth status)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(npm -v)"
     ]
   }
 }
