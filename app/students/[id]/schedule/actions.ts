@@ -2,7 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff } from "@/lib/auth";
-import { logAudit } from "@/lib/queries";
+import {
+  logAudit, getStudent, getTranscript, getOnlineLearningRecords,
+  getGraduationRequirements, getSupportPlans,
+} from "@/lib/queries";
+import { runGraduationAudit } from "@/lib/audit/graduation";
+import { recommendEdgePathways } from "@/lib/recommendations/edge";
+import { generateDraftSchedule } from "@/lib/scheduling/generate";
 import { redirect } from "next/navigation";
 import type { AcademicPathway } from "@/types";
 
@@ -30,6 +36,73 @@ export async function createDraftSchedule(studentId: string, schoolYear: string,
   await logAudit({ staffId: staff.id, studentId, action: "create", tableName: "schedules", recordId: data.id });
 
   redirect(`/students/${studentId}/schedule/${data.id}`);
+}
+
+/**
+ * Auto-generates a DRAFT schedule from the student's graduation gaps, pathway
+ * rules, accommodations, and EDGE recommendations, persists it with its course
+ * blocks, and hands off to the normal review/approval flow. The counselor can
+ * freely edit the result before submitting — this only seeds the draft.
+ */
+export async function generateAndCreateSchedule(studentId: string, schoolYear: string) {
+  const staff = await getCurrentStaff();
+  if (staff.role !== "admin" && staff.role !== "counselor") {
+    throw new Error("Not authorized to build schedules.");
+  }
+
+  const student = await getStudent(studentId);
+  if (!student) throw new Error("Student not found.");
+
+  const [transcript, onlineRecords, requirements, supportPlans] = await Promise.all([
+    getTranscript(studentId),
+    getOnlineLearningRecords(studentId),
+    getGraduationRequirements(schoolYear),
+    getSupportPlans(studentId),
+  ]);
+
+  const audit = runGraduationAudit(transcript, requirements, onlineRecords, schoolYear, student.gpa);
+  const edgeRecs = recommendEdgePathways(student);
+  const schedulingAccommodations = supportPlans.flatMap((sp) =>
+    sp.accommodations.filter((a) => a.affects_scheduling).map((a) => ({ description: a.description }))
+  );
+
+  const generated = generateDraftSchedule(student, audit, schedulingAccommodations, edgeRecs);
+
+  const supabase = await createClient();
+  const { data: schedule, error: scheduleError } = await supabase
+    .from("schedules")
+    .insert({
+      student_id: studentId,
+      school_year: schoolYear,
+      pathways: generated.pathways,
+      status: "draft",
+      generated_by: staff.id,
+      admin_notes: generated.rationale.length
+        ? `Auto-generated draft. Rationale:\n- ${generated.rationale.join("\n- ")}`
+        : null,
+    })
+    .select("id")
+    .single();
+
+  if (scheduleError) throw new Error(scheduleError.message);
+
+  if (generated.blocks.length > 0) {
+    const { error: blocksError } = await supabase.from("schedule_blocks").insert(
+      generated.blocks.map((b) => ({ ...b, schedule_id: schedule.id }))
+    );
+    if (blocksError) throw new Error(blocksError.message);
+  }
+
+  await logAudit({
+    staffId: staff.id,
+    studentId,
+    action: "generate",
+    tableName: "schedules",
+    recordId: schedule.id,
+    details: { auto: true, blocks: generated.blocks.length, pathways: generated.pathways },
+  });
+
+  redirect(`/students/${studentId}/schedule/${schedule.id}`);
 }
 
 export async function addScheduleBlock(scheduleId: string, studentId: string, formData: FormData) {

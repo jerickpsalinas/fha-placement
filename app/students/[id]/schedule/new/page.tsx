@@ -3,7 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { getStudent } from "@/lib/queries";
 import { notFound } from "next/navigation";
 import { PATHWAY_LABELS, type AcademicPathway } from "@/types";
-import { createDraftSchedule } from "@/app/students/[id]/schedule/actions";
+import { createDraftSchedule, generateAndCreateSchedule } from "@/app/students/[id]/schedule/actions";
 
 export default async function NewSchedulePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,6 +18,12 @@ export default async function NewSchedulePage({ params }: { params: Promise<{ id
     await createDraftSchedule(student!.id, schoolYear, pathways);
   }
 
+  async function autoGenerateAction(formData: FormData) {
+    "use server";
+    const schoolYear = String(formData.get("school_year") ?? "2026-2027");
+    await generateAndCreateSchedule(student!.id, schoolYear);
+  }
+
   return (
     <div className="flex">
       <Sidebar staff={staff} />
@@ -29,6 +35,26 @@ export default async function NewSchedulePage({ params }: { params: Promise<{ id
           Select the pathway(s) that fit this student. You can assign more than one — for example, a student
           can be on both the College Preparatory and IEP Support pathways at once.
         </p>
+
+        <form action={autoGenerateAction} className="bg-navy/5 border border-navy/20 rounded-lg p-6 mb-6">
+          <h2 className="font-semibold text-navy mb-1">Auto-generate a draft</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Build a starting draft automatically from this student&apos;s graduation gaps, pathway rules,
+            accommodations, and EDGE recommendations. You&apos;ll be able to review and edit every block
+            before submitting for approval — nothing is finalized automatically.
+          </p>
+          <div className="flex items-end gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1">School Year</label>
+              <input name="school_year" defaultValue="2026-2027" className="border border-gray-300 rounded px-3 py-2 text-sm w-48" />
+            </div>
+            <button type="submit" className="bg-navy text-white text-sm font-medium px-5 py-2.5 rounded hover:bg-navy/90">
+              Auto-generate Draft
+            </button>
+          </div>
+        </form>
+
+        <p className="text-xs uppercase tracking-wide text-gray-400 mb-3">Or build manually</p>
 
         <form action={action} className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
           <div>
