@@ -56,6 +56,14 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             </p>
           </div>
           <div className="flex gap-2">
+            {staff.role !== "teacher" && staff.role !== "read_only" && (
+              <Link
+                href={`/students/${student.id}/report`}
+                className="border border-navy text-navy text-sm font-medium px-4 py-2 rounded hover:bg-navy/5"
+              >
+                Export Report
+              </Link>
+            )}
             {(staff.role === "admin" || staff.role === "counselor") && (
               <Link
                 href={`/students/${student.id}/import-pdf`}
