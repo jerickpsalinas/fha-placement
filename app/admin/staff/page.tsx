@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { Sidebar } from "@/components/Sidebar";
 import { createClient } from "@/lib/supabase/server";
-import { inviteStaffMember, deactivateStaffMember } from "@/app/admin/staff/actions";
+import { createStaffMember, deactivateStaffMember } from "@/app/admin/staff/actions";
 import type { StaffProfile } from "@/types";
 
 export default async function ManageStaffPage() {
@@ -9,9 +9,9 @@ export default async function ManageStaffPage() {
   const supabase = await createClient();
   const { data: allStaff } = await supabase.from("staff_profiles").select("*").order("full_name");
 
-  async function inviteAction(formData: FormData) {
+  async function createAction(formData: FormData) {
     "use server";
-    await inviteStaffMember(formData);
+    await createStaffMember(formData);
   }
 
   return (
@@ -21,10 +21,11 @@ export default async function ManageStaffPage() {
         <h1 className="text-2xl font-bold text-navy">Manage Staff</h1>
 
         <section className="bg-white border border-gray-200 rounded-lg p-6">
-          <h2 className="font-semibold text-navy mb-4">Invite Staff Member</h2>
-          <form action={inviteAction} className="grid grid-cols-2 gap-3">
+          <h2 className="font-semibold text-navy mb-4">Add Staff Member</h2>
+          <form action={createAction} className="grid grid-cols-2 gap-3">
             <input name="full_name" placeholder="Full name" required className="border border-gray-300 rounded px-3 py-2 text-sm" />
             <input name="email" type="email" placeholder="Email" required className="border border-gray-300 rounded px-3 py-2 text-sm" />
+            <input name="password" type="password" placeholder="Initial password" required minLength={6} className="border border-gray-300 rounded px-3 py-2 text-sm col-span-2" />
             <select name="role" className="border border-gray-300 rounded px-3 py-2 text-sm col-span-2">
               <option value="director">Director</option>
               <option value="admin">Administrator</option>
@@ -33,11 +34,11 @@ export default async function ManageStaffPage() {
               <option value="read_only">Front Office / Read-only</option>
             </select>
             <button type="submit" className="col-span-2 bg-navy text-white text-sm font-medium px-4 py-2 rounded hover:bg-navy/90">
-              Send Invite
+              Add Staff Member
             </button>
           </form>
           <p className="text-xs text-gray-400 mt-2">
-            The invited person receives an email to set their password and sign in.
+            Set an initial email and password for the new staff member. Share these credentials with them directly.
           </p>
         </section>
 
