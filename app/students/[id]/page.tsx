@@ -50,12 +50,22 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
               Grade {student.grade_level} · {student.enrollment_type === "public_transfer" ? "Public school transfer" : "Continuing private school student"}
             </p>
           </div>
-          <Link
-            href={`/students/${student.id}/schedule/new`}
-            className="bg-navy text-white text-sm font-medium px-4 py-2 rounded hover:bg-navy/90"
-          >
-            Build Schedule
-          </Link>
+          <div className="flex gap-2">
+            {(staff.role === "admin" || staff.role === "counselor") && (
+              <Link
+                href={`/students/${student.id}/import-pdf`}
+                className="border border-navy text-navy text-sm font-medium px-4 py-2 rounded hover:bg-navy/5"
+              >
+                Import Transcript PDF
+              </Link>
+            )}
+            <Link
+              href={`/students/${student.id}/schedule/new`}
+              className="bg-navy text-white text-sm font-medium px-4 py-2 rounded hover:bg-navy/90"
+            >
+              Build Schedule
+            </Link>
+          </div>
         </div>
 
         {/* STUDENT PROFILE */}
