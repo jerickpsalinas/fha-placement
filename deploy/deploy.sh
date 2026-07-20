@@ -18,7 +18,7 @@
 set -euo pipefail
 
 # Absolute path to the deployed repo on the VPS. Override by exporting APP_DIR.
-APP_DIR="${APP_DIR:-/var/www/fha-placement}"
+APP_DIR="${APP_DIR:-/docker/fha-placement}"
 PM2_PROCESS="${PM2_PROCESS:-fha-placement}"
 BRANCH="${DEPLOY_BRANCH:-master}"
 LOCK_FILE="/tmp/fha-placement-deploy.lock"

@@ -34,8 +34,8 @@
     },
     {
       "parameters": {
-        "authentication": "privateKey",
-        "command": "bash /var/www/fha-placement/deploy/deploy.sh"
+        "authentication": "password",
+        "command": "bash /docker/fha-placement/deploy/deploy.sh"
       },
       "id": "ssh-deploy",
       "name": "SSH: run deploy.sh",
@@ -43,7 +43,7 @@
       "typeVersion": 1,
       "position": [760, 220],
       "credentials": {
-        "sshPrivateKey": {
+        "sshPassword": {
           "id": "REPLACE_WITH_SSH_CREDENTIAL_ID",
           "name": "FHA VPS SSH"
         }

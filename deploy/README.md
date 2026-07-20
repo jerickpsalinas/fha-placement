@@ -24,7 +24,7 @@ VPS, and the GitHub repo settings:
 
 1. **Put `deploy.sh` on the VPS and make it executable**
    ```bash
-   cd /var/www/fha-placement        # your actual repo path
+   cd /docker/fha-placement        # your actual repo path
    chmod +x deploy/deploy.sh
    # sanity check — run it once by hand:
    ./deploy/deploy.sh
