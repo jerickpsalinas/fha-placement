@@ -3,9 +3,11 @@ import { Sidebar } from "@/components/Sidebar";
 import {
   getStudent, getTestScores, getTranscript, getSupportPlans,
   getOnlineLearningRecords, getGraduationRequirements, getSchedules, getEdgePathways,
+  getSteamModules, getSteamAssignments,
 } from "@/lib/queries";
 import { runGraduationAudit } from "@/lib/audit/graduation";
 import { recommendEdgePathways } from "@/lib/recommendations/edge";
+import { recommendSteamModules, gradeBandForStudent } from "@/lib/recommendations/steam";
 import { EDGE_PATHWAY_LABELS } from "@/types";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -20,7 +22,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const student = await getStudent(id);
   if (!student) notFound();
 
-  const [testScores, transcript, supportPlans, onlineRecords, requirements, schedules, edgePathways] =
+  const [testScores, transcript, supportPlans, onlineRecords, requirements, schedules, edgePathways, steamModules, steamAssignments] =
     await Promise.all([
       getTestScores(student.id),
       getTranscript(student.id),
@@ -29,10 +31,13 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       getGraduationRequirements(CURRENT_SCHOOL_YEAR),
       getSchedules(student.id),
       getEdgePathways(student.id),
+      getSteamModules(),
+      getSteamAssignments(student.id),
     ]);
 
   const audit = runGraduationAudit(transcript, requirements, onlineRecords, CURRENT_SCHOOL_YEAR, student.gpa);
   const edgeRecs = recommendEdgePathways(student);
+  const steamRecs = recommendSteamModules(student, steamModules);
   const schedulingAccommodations = supportPlans.flatMap((sp) =>
     sp.accommodations.filter((a) => a.affects_scheduling)
   );
@@ -179,6 +184,33 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
                     </div>
                     <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
                       {alreadyTracked ? alreadyTracked.status.replace("_", " ") : "Suggested — not yet confirmed"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Section>
+
+        {/* STEAM RECOMMENDATIONS */}
+        <Section title={`STEAM Program Recommendations (${gradeBandForStudent(student)} band)`}>
+          {steamRecs.length === 0 ? (
+            <EmptyNote text="No STEAM modules configured for this student's grade band yet. Admins can add modules in reference data." />
+          ) : (
+            <div className="space-y-2">
+              {steamRecs.map((r) => {
+                const alreadyAssigned = steamAssignments.find((a) => a.steam_module_id === r.module.id);
+                return (
+                  <div key={r.module.id} className="flex items-center justify-between border border-gray-200 rounded px-4 py-3 text-sm">
+                    <div>
+                      <p className="font-medium">
+                        {r.module.month} — {r.module.theme}
+                        {r.currentMonth && <span className="ml-2 text-xs text-gold font-medium">this month</span>}
+                      </p>
+                      {r.module.description && <p className="text-gray-500 text-xs">{r.module.description}</p>}
+                    </div>
+                    <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600">
+                      {alreadyAssigned ? (alreadyAssigned.completed ? "completed" : "assigned") : "Suggested — not yet assigned"}
                     </span>
                   </div>
                 );

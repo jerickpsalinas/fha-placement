@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   Student, TestScore, TranscriptEntry, SupportPlan, Accommodation,
   OnlineLearningRecord, GraduationRequirement, Schedule, ScheduleBlock,
-  StudentEdgePathway,
+  StudentEdgePathway, SteamModule, StudentSteamAssignment,
 } from "@/types";
 
 /** List students visible to the current user (RLS handles scoping). */
@@ -107,6 +107,23 @@ export async function getEdgePathways(studentId: string): Promise<StudentEdgePat
     .eq("student_id", studentId);
   if (error) throw error;
   return data as StudentEdgePathway[];
+}
+
+export async function getSteamModules(): Promise<SteamModule[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("steam_modules").select("*");
+  if (error) throw error;
+  return data as SteamModule[];
+}
+
+export async function getSteamAssignments(studentId: string): Promise<StudentSteamAssignment[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("student_steam_assignments")
+    .select("*")
+    .eq("student_id", studentId);
+  if (error) throw error;
+  return data as StudentSteamAssignment[];
 }
 
 /** Schedules awaiting admin approval, across all students (admin dashboard). */

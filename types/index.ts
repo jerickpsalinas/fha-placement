@@ -164,6 +164,26 @@ export interface StudentEdgePathway {
   created_at: string;
 }
 
+export type SteamGradeBand = "K-2" | "3-5" | "6-8" | "9-12";
+
+export interface SteamModule {
+  id: string;
+  month: string;
+  theme: string;
+  grade_band: string;
+  standards_linked: string[] | null;
+  description: string | null;
+  created_at: string;
+}
+
+export interface StudentSteamAssignment {
+  id: string;
+  student_id: string;
+  steam_module_id: string;
+  completed: boolean;
+  school_year: string;
+}
+
 export const EDGE_PATHWAY_LABELS: Record<EdgePathway, string> = {
   quickbooks_certification: "QuickBooks Online Certification",
   entrepreneurship: "Entrepreneurship",
