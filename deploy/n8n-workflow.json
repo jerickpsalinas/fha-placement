@@ -1,0 +1,78 @@
+{
+  "name": "FHA Placement — Auto Deploy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fha-deploy",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "GitHub Push Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "webhookId": "fha-deploy"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json[\"body\"][\"ref\"] }}",
+              "operation": "equal",
+              "value2": "refs/heads/master"
+            }
+          ]
+        }
+      },
+      "id": "branch-filter",
+      "name": "Only master branch",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "bash /var/www/fha-placement/deploy/deploy.sh"
+      },
+      "id": "ssh-deploy",
+      "name": "SSH: run deploy.sh",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [760, 220],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_WITH_SSH_CREDENTIAL_ID",
+          "name": "FHA VPS SSH"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json[\"stdout\"] || 'Deploy triggered.' }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1000, 220]
+    }
+  ],
+  "connections": {
+    "GitHub Push Webhook": {
+      "main": [[{ "node": "Only master branch", "type": "main", "index": 0 }]]
+    },
+    "Only master branch": {
+      "main": [[{ "node": "SSH: run deploy.sh", "type": "main", "index": 0 }]]
+    },
+    "SSH: run deploy.sh": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {},
+  "active": false
+}
