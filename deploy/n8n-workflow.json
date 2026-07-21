@@ -5,14 +5,26 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "fha-deploy",
-        "options": {}
+        "options": {
+          "rawBody": true
+        }
       },
       "id": "webhook-trigger",
       "name": "GitHub Push Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [260, 300],
+      "position": [240, 300],
       "webhookId": "fha-deploy"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Verifies the GitHub webhook signature before anything else runs.\n// GitHub signs the RAW request body with the webhook secret and sends it as\n// X-Hub-Signature-256. Without this check, anyone who learns the webhook URL\n// can trigger a production deploy.\n//\n// The Webhook node must have \"Raw Body\" enabled so we hash the exact bytes\n// GitHub sent — re-stringifying parsed JSON does not reliably round-trip.\n\nconst crypto = require('crypto');\n\n// Prefer an env var on the n8n host; otherwise paste the secret below.\nlet secret;\ntry { secret = $env.FHA_DEPLOY_SECRET; } catch (e) { secret = undefined; }\nif (!secret) secret = 'REPLACE_WITH_WEBHOOK_SECRET';\nif (!secret || secret === 'REPLACE_WITH_WEBHOOK_SECRET') {\n  throw new Error('Deploy webhook secret is not configured in n8n.');\n}\n\nconst item = $input.first();\nconst headers = item.json.headers || {};\nconst signature = headers['x-hub-signature-256'];\nif (!signature) {\n  throw new Error('Missing X-Hub-Signature-256 header - rejecting unsigned request.');\n}\n\nconst bin = item.binary && item.binary.data;\nif (!bin) {\n  throw new Error('Raw body unavailable - enable \"Raw Body\" on the Webhook node.');\n}\nconst raw = Buffer.from(bin.data, 'base64');\n\nconst expected = 'sha256=' + crypto.createHmac('sha256', secret).update(raw).digest('hex');\n\n// Constant-time comparison so we do not leak the signature via timing.\nconst a = Buffer.from(signature);\nconst b = Buffer.from(expected);\nif (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {\n  throw new Error('Invalid webhook signature - rejecting request.');\n}\n\nreturn [{ json: { body: JSON.parse(raw.toString('utf8')), verified: true } }];"
+      },
+      "id": "verify-signature",
+      "name": "Verify GitHub signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
     },
     {
       "parameters": {
@@ -30,7 +42,7 @@
       "name": "Only master branch",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [500, 300]
+      "position": [680, 300]
     },
     {
       "parameters": {
@@ -41,7 +53,7 @@
       "name": "SSH: run deploy.sh",
       "type": "n8n-nodes-base.ssh",
       "typeVersion": 1,
-      "position": [760, 220],
+      "position": [900, 220],
       "credentials": {
         "sshPassword": {
           "id": "REPLACE_WITH_SSH_CREDENTIAL_ID",
@@ -59,11 +71,14 @@
       "name": "Respond",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1000, 220]
+      "position": [1120, 220]
     }
   ],
   "connections": {
     "GitHub Push Webhook": {
+      "main": [[{ "node": "Verify GitHub signature", "type": "main", "index": 0 }]]
+    },
+    "Verify GitHub signature": {
       "main": [[{ "node": "Only master branch", "type": "main", "index": 0 }]]
     },
     "Only master branch": {

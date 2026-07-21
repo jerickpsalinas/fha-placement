@@ -40,25 +40,54 @@ VPS, and the GitHub repo settings:
    - Activate the workflow. Copy the **Production webhook URL** from the
      webhook node (looks like `https://<your-n8n>/webhook/fha-deploy`).
 
-3. **Add the webhook to GitHub**
+3. **Set the shared secret (required — see "Webhook security" below).**
+
+4. **Add the webhook to GitHub**
    - Repo → Settings → Webhooks → Add webhook.
    - Payload URL = the n8n production webhook URL.
    - Content type = `application/json`.
-   - Secret = a strong random string (see hardening below).
+   - Secret = the same secret configured in n8n.
    - Events = **Just the push event**.
 
-4. **Test**: push a trivial commit to `master` and confirm the VPS rebuilds
+5. **Test**: push a trivial commit to `master` and confirm the VPS rebuilds
    (watch `pm2 logs fha-placement`, or n8n's execution log).
 
 ---
 
-## Hardening (recommended before going live)
+## Webhook security (HMAC signature verification)
 
-- **Verify the GitHub signature.** GitHub signs each delivery with the webhook
-  secret in the `X-Hub-Signature-256` header. Add a Function/Crypto node in n8n
-  that recomputes `HMAC-SHA256(secret, rawBody)` and compares it before the SSH
-  node runs, so only GitHub can trigger a deploy. Without this, anyone who
-  learns the webhook URL can trigger builds.
+The workflow's **Verify GitHub signature** node recomputes
+`HMAC-SHA256(secret, rawBody)` and constant-time compares it against GitHub's
+`X-Hub-Signature-256` header. Unsigned or forged requests throw before the SSH
+node runs, so knowing the webhook URL is no longer enough to trigger a deploy.
+
+**Setup — the secret must match on both sides:**
+
+1. Generate one:
+   ```bash
+   openssl rand -hex 32
+   ```
+2. **In n8n** — either (preferred) set `FHA_DEPLOY_SECRET` in the n8n
+   container's environment and restart it, or open the **Verify GitHub
+   signature** node and replace `REPLACE_WITH_WEBHOOK_SECRET` with the value.
+   The node reads the env var first and falls back to the inline constant.
+   > Keep the real secret out of this repo — the committed file only ever holds
+   > the placeholder.
+3. **In GitHub** — paste the same value into the webhook's **Secret** field.
+
+**Requirements / gotchas:**
+
+- The Webhook node must keep **Raw Body** enabled (`options.rawBody: true`).
+  The signature covers the exact bytes GitHub sent; re-stringifying parsed JSON
+  does not reliably round-trip (unicode in commit messages will break it).
+- The Code node uses Node's `crypto`. If n8n reports that `require` is not
+  allowed, set `NODE_FUNCTION_ALLOW_BUILTIN=crypto` on the n8n container and
+  restart.
+- **Rotating the secret:** update it in n8n first, then in GitHub. Pushes in
+  between will be rejected (and simply won't deploy) until both match.
+
+## Other hardening
+
 - **Least-privilege SSH.** Use a dedicated deploy user/key that can only run the
   deploy (consider a forced command in `authorized_keys`).
 - **Branch filter is already in place** — the `Only master branch` node drops
