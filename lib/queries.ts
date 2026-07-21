@@ -109,6 +109,21 @@ export async function getEdgePathways(studentId: string): Promise<StudentEdgePat
   return data as StudentEdgePathway[];
 }
 
+/**
+ * School years that actually have graduation requirements configured. The
+ * schedule generator can't calculate subject-area gaps for any other year,
+ * so the UI offers only these.
+ */
+export async function getGraduationRequirementYears(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("graduation_requirements")
+    .select("school_year")
+    .order("school_year", { ascending: false });
+  if (error) throw error;
+  return [...new Set((data as { school_year: string }[]).map((r) => r.school_year))];
+}
+
 export async function getSteamModules(): Promise<SteamModule[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("steam_modules").select("*");

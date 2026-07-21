@@ -46,8 +46,9 @@ export default async function ScheduleDetailPage({
     await rejectSchedule(schedule!.id, student!.id, String(formData.get("reason") ?? ""));
   }
 
-  const canEdit = (staff.role === "admin" || staff.role === "counselor") && schedule.status !== "approved";
-  const canApprove = staff.role === "admin" && schedule.status === "pending_approval";
+  const canEdit = ["admin", "director", "counselor"].includes(staff.role) && schedule.status !== "approved";
+  const canApprove = ["admin", "director"].includes(staff.role) && schedule.status === "pending_approval";
+  const interventionBlocks = blocks.filter((b) => b.course_category === "intervention");
 
   return (
     <div className="flex">
@@ -68,6 +69,42 @@ export default async function ScheduleDetailPage({
             ))}
           </div>
         </section>
+
+        {interventionBlocks.length > 0 ? (
+          <section className="bg-amber-50 border border-amber-300 rounded-lg p-4 text-sm text-amber-900">
+            <p className="font-semibold mb-1">
+              Intervention placements ({interventionBlocks.length})
+            </p>
+            <p className="mb-2 text-amber-800">
+              This student was flagged for academic support. The reasoning is in &ldquo;How this draft was built&rdquo; below.
+            </p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {interventionBlocks.map((b) => (
+                <li key={b.id}>
+                  <span className="font-medium">{b.course_name}</span>
+                  {b.notes ? ` — ${b.notes}` : ""}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : (
+          <section className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm text-gray-600">
+            <p className="font-medium">No intervention placements in this schedule.</p>
+            <p>
+              The generator found no support triggers (GPA, test scores, credit pace, IEP/504). If you expected
+              intervention here, check that the student&apos;s test scores and GPA are on file.
+            </p>
+          </section>
+        )}
+
+        {schedule.admin_notes && (
+          <section className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="font-semibold text-navy mb-3">How this draft was built</h2>
+            <pre className="whitespace-pre-wrap text-xs text-gray-700 font-sans leading-relaxed">
+              {schedule.admin_notes}
+            </pre>
+          </section>
+        )}
 
         {schedulingNotes.length > 0 && (
           <section className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
@@ -125,7 +162,7 @@ export default async function ScheduleDetailPage({
           )}
         </section>
 
-        {(staff.role === "admin" || staff.role === "counselor") && schedule.status === "draft" && (
+        {["admin", "director", "counselor"].includes(staff.role) && schedule.status === "draft" && (
           <form action={submitAction}>
             <button type="submit" className="bg-gold text-white text-sm font-medium px-5 py-2.5 rounded hover:opacity-90">
               Submit for Admin Approval
