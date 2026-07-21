@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff } from "@/lib/auth";
 import {
   logAudit, getStudent, getTranscript, getOnlineLearningRecords,
-  getGraduationRequirements, getSupportPlans,
+  getGraduationRequirements, getSupportPlans, getTestScores,
 } from "@/lib/queries";
 import { runGraduationAudit } from "@/lib/audit/graduation";
 import { recommendEdgePathways } from "@/lib/recommendations/edge";
@@ -14,7 +14,7 @@ import type { AcademicPathway } from "@/types";
 
 export async function createDraftSchedule(studentId: string, schoolYear: string, pathways: AcademicPathway[]) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin" && staff.role !== "counselor") {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     throw new Error("Not authorized to build schedules.");
   }
   const supabase = await createClient();
@@ -46,18 +46,19 @@ export async function createDraftSchedule(studentId: string, schoolYear: string,
  */
 export async function generateAndCreateSchedule(studentId: string, schoolYear: string) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin" && staff.role !== "counselor") {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     throw new Error("Not authorized to build schedules.");
   }
 
   const student = await getStudent(studentId);
   if (!student) throw new Error("Student not found.");
 
-  const [transcript, onlineRecords, requirements, supportPlans] = await Promise.all([
+  const [transcript, onlineRecords, requirements, supportPlans, testScores] = await Promise.all([
     getTranscript(studentId),
     getOnlineLearningRecords(studentId),
     getGraduationRequirements(schoolYear),
     getSupportPlans(studentId),
+    getTestScores(studentId),
   ]);
 
   const audit = runGraduationAudit(transcript, requirements, onlineRecords, schoolYear, student.gpa);
@@ -66,7 +67,23 @@ export async function generateAndCreateSchedule(studentId: string, schoolYear: s
     sp.accommodations.filter((a) => a.affects_scheduling).map((a) => ({ description: a.description }))
   );
 
-  const generated = generateDraftSchedule(student, audit, schedulingAccommodations, edgeRecs);
+  const generated = generateDraftSchedule(
+    student, audit, schedulingAccommodations, edgeRecs, testScores
+  );
+
+  // Build a readable summary staff actually see on the schedule page. Kept as
+  // text (not a new column) so this ships without a schema migration.
+  const summaryParts: string[] = [`Auto-generated draft — ${new Date().toISOString().slice(0, 10)}`];
+  if (generated.warnings.length) {
+    summaryParts.push(`⚠ NEEDS ATTENTION:\n- ${generated.warnings.join("\n- ")}`);
+  }
+  summaryParts.push(
+    generated.interventionFindings.length
+      ? `INTERVENTION — triggered by:\n- ${generated.interventionFindings.map((f) => f.reason).join("\n- ")}`
+      : "INTERVENTION — not triggered (GPA, test scores, and credit pace all within range)."
+  );
+  summaryParts.push(`PLACEMENT RATIONALE:\n- ${generated.rationale.join("\n- ")}`);
+  const generationSummary = summaryParts.join("\n\n");
 
   const supabase = await createClient();
   const { data: schedule, error: scheduleError } = await supabase
@@ -77,9 +94,7 @@ export async function generateAndCreateSchedule(studentId: string, schoolYear: s
       pathways: generated.pathways,
       status: "draft",
       generated_by: staff.id,
-      admin_notes: generated.rationale.length
-        ? `Auto-generated draft. Rationale:\n- ${generated.rationale.join("\n- ")}`
-        : null,
+      admin_notes: generationSummary,
     })
     .select("id")
     .single();
@@ -99,7 +114,13 @@ export async function generateAndCreateSchedule(studentId: string, schoolYear: s
     action: "generate",
     tableName: "schedules",
     recordId: schedule.id,
-    details: { auto: true, blocks: generated.blocks.length, pathways: generated.pathways },
+    details: {
+      auto: true,
+      blocks: generated.blocks.length,
+      pathways: generated.pathways,
+      interventionFindings: generated.interventionFindings.map((f) => f.reason),
+      warnings: generated.warnings,
+    },
   });
 
   redirect(`/students/${studentId}/schedule/${schedule.id}`);
@@ -139,12 +160,28 @@ export async function submitForApproval(scheduleId: string, studentId: string) {
 
 export async function approveSchedule(scheduleId: string, studentId: string, adminNotes: string) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin") throw new Error("Only an administrator can approve a schedule.");
+  if (staff.role !== "admin" && staff.role !== "director") {
+    throw new Error("Only an administrator can approve a schedule.");
+  }
   const supabase = await createClient();
+
+  // Append rather than overwrite — admin_notes carries the generation summary
+  // (intervention reasoning), which must survive approval.
+  const { data: existing } = await supabase
+    .from("schedules")
+    .select("admin_notes")
+    .eq("id", scheduleId)
+    .single();
+
+  const merged = adminNotes
+    ? [existing?.admin_notes, `APPROVAL NOTE (${staff.full_name}): ${adminNotes}`]
+        .filter(Boolean)
+        .join("\n\n")
+    : existing?.admin_notes ?? null;
 
   const { error } = await supabase
     .from("schedules")
-    .update({ status: "approved", admin_notes: adminNotes || null })
+    .update({ status: "approved", admin_notes: merged })
     .eq("id", scheduleId);
 
   if (error) throw new Error(error.message);
@@ -154,7 +191,9 @@ export async function approveSchedule(scheduleId: string, studentId: string, adm
 
 export async function rejectSchedule(scheduleId: string, studentId: string, reason: string) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin") throw new Error("Only an administrator can reject a schedule.");
+  if (staff.role !== "admin" && staff.role !== "director") {
+    throw new Error("Only an administrator can reject a schedule.");
+  }
   const supabase = await createClient();
 
   const { error } = await supabase

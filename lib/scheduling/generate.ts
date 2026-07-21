@@ -1,4 +1,4 @@
-import type { Student, AcademicPathway } from "@/types";
+import type { Student, AcademicPathway, TestScore } from "@/types";
 import type { GraduationAudit } from "@/lib/audit/graduation";
 import type { EdgeRecommendation } from "@/lib/recommendations/edge";
 
@@ -6,8 +6,9 @@ import type { EdgeRecommendation } from "@/lib/recommendations/edge";
  * Rule-based draft schedule generator.
  *
  * Given a student, their graduation audit (subject-area gaps + online-learning
- * status), any scheduling-relevant accommodations, and EDGE recommendations,
- * this proposes a set of course blocks and the pathways that best fit.
+ * status), recent test scores, scheduling-relevant accommodations, and EDGE
+ * recommendations, this proposes a set of course blocks and the pathways that
+ * best fit.
  *
  * Like the rest of this app it is deliberately transparent and conservative:
  * it fills gaps subject-by-subject and annotates *why* each block was placed.
@@ -23,11 +24,22 @@ export interface GeneratedBlock {
   notes: string | null;
 }
 
+/** A specific, citable reason the student was placed into intervention. */
+export interface InterventionFinding {
+  reason: string;
+  /** Graduation subject area this finding points at, when it maps to one. */
+  subject: string | null;
+}
+
 export interface GeneratedSchedule {
   pathways: AcademicPathway[];
   blocks: GeneratedBlock[];
   /** Human-readable explanation of how the draft was assembled. */
   rationale: string[];
+  /** Why the student was (or wasn't) flagged for intervention. */
+  interventionFindings: InterventionFinding[];
+  /** Conditions that limited what could be generated (shown to staff). */
+  warnings: string[];
 }
 
 /** Maps a graduation subject-area bucket to a sensible default course name. */
@@ -42,16 +54,123 @@ const SUBJECT_TO_COURSE: Record<string, string> = {
   Electives: "Elective",
 };
 
-const MAX_BLOCKS = 7; // typical daily period count; keeps drafts realistic
+/**
+ * Default 7-period bell schedule used to label blocks with real time slots.
+ * These are a starting template — adjust to the school's actual bell times.
+ */
+export const BELL_SCHEDULE: { label: string; time: string }[] = [
+  { label: "Period 1", time: "8:00–8:50" },
+  { label: "Period 2", time: "8:55–9:45" },
+  { label: "Period 3", time: "9:50–10:40" },
+  { label: "Period 4", time: "10:45–11:35" },
+  { label: "Period 5", time: "12:15–1:05" },
+  { label: "Period 6", time: "1:10–2:00" },
+  { label: "Period 7", time: "2:05–2:55" },
+];
+
+const MAX_BLOCKS = BELL_SCHEDULE.length;
+
+/** Credits a student is expected to have ENTERING a given grade (~6/year). */
+function expectedCreditsEnteringGrade(gradeNum: number): number {
+  return Math.max(0, (gradeNum - 9) * 6);
+}
+
+/** Proficiency wording that indicates a student is performing below level. */
+const BELOW_LEVEL_PROFICIENCY = /below|level\s?1\b|level\s?2\b|far below|not proficient|beginning|inadequate|intervention/i;
+
+/** Percentile at or under which a score is treated as below level. */
+const BELOW_LEVEL_PERCENTILE = 25;
+
+function isBelowLevel(score: TestScore): boolean {
+  if (score.proficiency_level && BELOW_LEVEL_PROFICIENCY.test(score.proficiency_level)) return true;
+  if (score.percentile !== null && score.percentile < BELOW_LEVEL_PERCENTILE) return true;
+  return false;
+}
+
+/** Maps a test subject label onto a graduation subject area, when it maps. */
+function subjectAreaForTestSubject(subject: string | null): string | null {
+  if (!subject) return null;
+  if (/math|algebra|geometry|quantitative|numer/i.test(subject)) return "Mathematics";
+  if (/read|ela\b|english|language|literacy|writing/i.test(subject)) return "English/Language Arts";
+  if (/scien|biolog|chem|physic/i.test(subject)) return "Science";
+  return null;
+}
+
+/**
+ * Determines whether a student needs academic intervention, and why.
+ *
+ * Deliberately multi-signal — a student can need help for reasons that have
+ * nothing to do with GPA (e.g. a strong-GPA student with a below-level FAST
+ * reading score). Each finding is returned so the counselor can see exactly
+ * what triggered the placement rather than trusting an opaque flag.
+ */
+export function assessIntervention(
+  student: Student,
+  audit: GraduationAudit,
+  testScores: TestScore[]
+): InterventionFinding[] {
+  const findings: InterventionFinding[] = [];
+  const gradeNum = student.grade_level === "K" ? 0 : parseInt(student.grade_level, 10);
+
+  // 1. GPA signal. 2.5 (not 2.0) so students who are quietly struggling are
+  //    caught before they fail outright.
+  if (student.gpa !== null && student.gpa < 2.5) {
+    findings.push({
+      reason: `GPA of ${student.gpa.toFixed(2)} is below the 2.5 support threshold`,
+      subject: null,
+    });
+  }
+
+  // 2. Below-level standardized scores — evaluate the most recent score per
+  //    subject so an old low score doesn't override recent growth.
+  const latestBySubject = new Map<string, TestScore>();
+  for (const score of testScores) {
+    const key = `${score.subject ?? "overall"}`;
+    const existing = latestBySubject.get(key);
+    if (!existing || score.test_date > existing.test_date) latestBySubject.set(key, score);
+  }
+  for (const score of latestBySubject.values()) {
+    if (!isBelowLevel(score)) continue;
+    const detail =
+      score.proficiency_level ??
+      (score.percentile !== null ? `${score.percentile}th percentile` : "below benchmark");
+    findings.push({
+      reason: `${score.test_type}${score.subject ? ` ${score.subject}` : ""} is below level (${detail}, ${score.test_date})`,
+      subject: subjectAreaForTestSubject(score.subject),
+    });
+  }
+
+  // 3. Credit pace — meaningfully behind where this grade level should be.
+  const expected = expectedCreditsEnteringGrade(gradeNum);
+  if (gradeNum >= 10 && student.credits_earned < expected - 3) {
+    findings.push({
+      reason: `${student.credits_earned} credits earned vs ~${expected} expected entering grade ${gradeNum}`,
+      subject: null,
+    });
+  }
+
+  // 4. Large outstanding graduation gap relative to time remaining. A student
+  //    in grade N still has grades N..12 to complete, hence 13 - N years.
+  const yearsLeft = Math.max(0, 13 - gradeNum);
+  if (yearsLeft > 0 && audit.totalCreditsRemaining > yearsLeft * 7) {
+    findings.push({
+      reason: `${audit.totalCreditsRemaining.toFixed(1)} credits remaining with ~${yearsLeft} year(s) left — above a normal course load`,
+      subject: null,
+    });
+  }
+
+  return findings;
+}
 
 export function generateDraftSchedule(
   student: Student,
   audit: GraduationAudit,
   schedulingAccommodations: { description: string }[],
-  edgeRecs: EdgeRecommendation[]
+  edgeRecs: EdgeRecommendation[],
+  testScores: TestScore[] = []
 ): GeneratedSchedule {
-  const blocks: GeneratedBlock[] = [];
   const rationale: string[] = [];
+  const warnings: string[] = [];
   const pathways = new Set<AcademicPathway>();
 
   const gradeNum = student.grade_level === "K" ? 0 : parseInt(student.grade_level, 10);
@@ -60,119 +179,187 @@ export function generateDraftSchedule(
       ? schedulingAccommodations.map((a) => a.description).join("; ")
       : null;
 
-  // 1. Prioritize unmet core-subject requirements, largest gap first.
-  const gaps = audit.subjectAreas
-    .filter((s) => !s.satisfied && s.creditsRemaining > 0)
-    .sort((a, b) => b.creditsRemaining - a.creditsRemaining);
+  const interventionFindings = assessIntervention(student, audit, testScores);
+  const needsIntervention = interventionFindings.length > 0;
+  // Subjects with specific below-level evidence get intervention-flavored core
+  // courses; a general signal (GPA/credits) applies across the board.
+  const interventionSubjects = new Set(
+    interventionFindings.map((f) => f.subject).filter((s): s is string => s !== null)
+  );
+  const generalIntervention = interventionFindings.some((f) => f.subject === null);
 
-  let period = 1;
-  for (const gap of gaps) {
-    if (blocks.length >= MAX_BLOCKS) break;
-    const baseCourse = SUBJECT_TO_COURSE[gap.subjectArea] ?? gap.subjectArea;
-
-    // Honors vs. intervention framing based on GPA.
-    let category = "core";
-    let coursePrefix = "";
-    if (student.gpa !== null && student.gpa >= 3.5) {
-      category = "honors";
-      coursePrefix = "Honors ";
-      pathways.add("advanced_honors");
-    } else if (student.gpa !== null && student.gpa < 2.0) {
-      category = "intervention";
-      pathways.add("intervention");
-    } else {
-      pathways.add("standard");
-    }
-
-    blocks.push({
-      block_label: `Period ${period++}`,
-      course_name: `${coursePrefix}${baseCourse}`,
-      course_category: category,
-      is_online: false,
-      notes: `Fills ${gap.subjectArea} gap (${gap.creditsRemaining.toFixed(1)} credit(s) remaining)${accommodationNote ? ` · Accommodation: ${accommodationNote}` : ""}`,
-    });
-    rationale.push(
-      `Added ${gap.subjectArea} to close a ${gap.creditsRemaining.toFixed(1)}-credit gap toward graduation.`
+  // Surface why nothing could be generated, rather than silently producing an
+  // empty draft — this is the single most confusing failure mode for staff.
+  if (audit.subjectAreas.length === 0) {
+    warnings.push(
+      `No graduation requirements are configured for ${audit.schoolYear}, so subject-area gaps could not be calculated. An administrator needs to add requirements for this school year before the generator can propose core courses.`
     );
   }
 
-  // 2. Online-learning requirement: place an online course if not yet met.
-  if (!audit.onlineLearningRequirementMet && blocks.length < MAX_BLOCKS) {
-    blocks.push({
-      block_label: `Period ${period++}`,
+  // ---- Build candidate blocks in priority tiers ----------------------------
+
+  // Tier 1: unmet core-subject requirements, largest gap first.
+  const gapBlocks: GeneratedBlock[] = audit.subjectAreas
+    .filter((s) => !s.satisfied && s.creditsRemaining > 0)
+    .sort((a, b) => b.creditsRemaining - a.creditsRemaining)
+    .map((gap) => {
+      const baseCourse = SUBJECT_TO_COURSE[gap.subjectArea] ?? gap.subjectArea;
+      const subjectFlagged = interventionSubjects.has(gap.subjectArea);
+
+      let category = "core";
+      let coursePrefix = "";
+      if (subjectFlagged || generalIntervention) {
+        category = "intervention";
+        coursePrefix = "Supported ";
+        pathways.add("intervention");
+      } else if (student.gpa !== null && student.gpa >= 3.5) {
+        category = "honors";
+        coursePrefix = "Honors ";
+        pathways.add("advanced_honors");
+      }
+
+      const why = subjectFlagged
+        ? ` · Below-level ${gap.subjectArea} performance — supported section recommended`
+        : "";
+      return {
+        block_label: "",
+        course_name: `${coursePrefix}${baseCourse}`,
+        course_category: category,
+        is_online: false,
+        notes: `Fills ${gap.subjectArea} gap (${gap.creditsRemaining.toFixed(1)} credit(s) remaining)${why}${accommodationNote ? ` · Accommodation: ${accommodationNote}` : ""}`,
+      };
+    });
+
+  // Tier 2: support blocks — these must not be squeezed out by electives.
+  const supportBlocks: GeneratedBlock[] = [];
+  if (student.has_iep) {
+    pathways.add("iep_support");
+    supportBlocks.push({
+      block_label: "",
+      course_name: "IEP Support / Resource Period",
+      course_category: "intervention",
+      is_online: false,
+      notes: `Dedicated support period for IEP service delivery${accommodationNote ? ` · Accommodation: ${accommodationNote}` : ""}`,
+    });
+  }
+  if (student.has_504) {
+    pathways.add("504_support");
+    if (!student.has_iep) {
+      supportBlocks.push({
+        block_label: "",
+        course_name: "504 Support Check-in",
+        course_category: "intervention",
+        is_online: false,
+        notes: `Scheduled check-in to monitor 504 accommodations${accommodationNote ? ` · Accommodation: ${accommodationNote}` : ""}`,
+      });
+    }
+  }
+  // Targeted lab for each subject with below-level evidence.
+  for (const subject of interventionSubjects) {
+    supportBlocks.push({
+      block_label: "",
+      course_name: `${subject === "English/Language Arts" ? "Reading" : subject} Intervention Lab`,
+      course_category: "intervention",
+      is_online: false,
+      notes:
+        interventionFindings
+          .filter((f) => f.subject === subject)
+          .map((f) => f.reason)
+          .join("; ") || `Targeted support in ${subject}`,
+    });
+  }
+  if (needsIntervention) pathways.add("intervention");
+
+  // Tier 3: outstanding graduation requirements.
+  const requirementBlocks: GeneratedBlock[] = [];
+  if (!audit.onlineLearningRequirementMet) {
+    requirementBlocks.push({
+      block_label: "",
       course_name: "Online Elective (e.g. FLVS)",
       course_category: "online",
       is_online: true,
       notes: "Satisfies Florida online-learning graduation requirement (not yet met).",
     });
-    rationale.push("Added an online course to satisfy the outstanding online-learning requirement.");
   }
-
-  // 3. Credit recovery for students significantly behind on total credits.
-  const expectedCreditsByGrade = Math.max(0, (gradeNum - 8) * 6); // ~6 credits/yr in HS
-  if (
-    gradeNum >= 9 &&
-    student.credits_earned < expectedCreditsByGrade - 3 &&
-    blocks.length < MAX_BLOCKS
-  ) {
+  const expected = expectedCreditsEnteringGrade(gradeNum);
+  if (gradeNum >= 10 && student.credits_earned < expected - 3) {
     pathways.add("credit_recovery");
-    blocks.push({
-      block_label: `Period ${period++}`,
+    requirementBlocks.push({
+      block_label: "",
       course_name: "Credit Recovery",
       course_category: "credit_recovery",
       is_online: true,
-      notes: `Behind pace: ${student.credits_earned} credits earned vs ~${expectedCreditsByGrade} expected by grade ${gradeNum}.`,
+      notes: `Behind pace: ${student.credits_earned} credits earned vs ~${expected} expected entering grade ${gradeNum}.`,
     });
-    rationale.push("Added credit recovery — student is meaningfully behind the expected credit pace.");
   }
 
-  // 4. Dual enrollment / college-prep framing for strong upper-grade students.
-  if (student.dual_enrollment_active) {
-    pathways.add("dual_enrollment");
-  }
-  if (gradeNum >= 11 && student.gpa !== null && student.gpa >= 3.0) {
+  // Tier 4: enrichment — first to be dropped when the day is full.
+  const enrichmentBlocks: GeneratedBlock[] = [];
+  if (student.dual_enrollment_active) pathways.add("dual_enrollment");
+  // Only steer a student toward college-prep load if they aren't in intervention.
+  if (gradeNum >= 11 && student.gpa !== null && student.gpa >= 3.0 && !needsIntervention) {
     pathways.add("college_preparatory");
-    if (blocks.length < MAX_BLOCKS) {
-      blocks.push({
-        block_label: `Period ${period++}`,
-        course_name: student.dual_enrollment_active ? "Dual Enrollment Course" : "ACT/SAT Prep",
-        course_category: student.dual_enrollment_active ? "dual_enrollment" : "act_sat_prep",
-        is_online: false,
-        notes: "College-preparatory placement based on grade level and GPA.",
-      });
-      rationale.push("Added a college-prep block (dual enrollment or test prep) for an upper-grade, college-track student.");
-    }
+    enrichmentBlocks.push({
+      block_label: "",
+      course_name: student.dual_enrollment_active ? "Dual Enrollment Course" : "ACT/SAT Prep",
+      course_category: student.dual_enrollment_active ? "dual_enrollment" : "act_sat_prep",
+      is_online: false,
+      notes: "College-preparatory placement based on grade level and GPA.",
+    });
   }
-
-  // 5. EDGE career elective if there's a strong recommendation and room left.
-  if (edgeRecs.length > 0 && blocks.length < MAX_BLOCKS) {
+  if (edgeRecs.length > 0) {
     pathways.add("edge_career");
-    const top = edgeRecs[0];
-    blocks.push({
-      block_label: `Period ${period++}`,
+    enrichmentBlocks.push({
+      block_label: "",
       course_name: "EDGE Career Pathway Elective",
       course_category: "edge",
       is_online: false,
-      notes: `Suggested EDGE focus: ${top.reason}`,
+      notes: `Suggested EDGE focus: ${edgeRecs[0].reason}`,
     });
-    rationale.push("Added an EDGE career elective aligned to the student's top pathway recommendation.");
   }
 
-  // 6. Support pathways always reflect plan status.
-  if (student.has_iep) pathways.add("iep_support");
-  if (student.has_504) pathways.add("504_support");
+  // ---- Assemble within the day, protecting support blocks -----------------
+  // Core gaps come first, but we reserve room for support + requirement blocks
+  // so a student with many gaps still gets their intervention/IEP period.
+  const reserved = Math.min(supportBlocks.length + requirementBlocks.length, MAX_BLOCKS - 1);
+  const blocks: GeneratedBlock[] = [
+    ...gapBlocks.slice(0, Math.max(1, MAX_BLOCKS - reserved)),
+    ...supportBlocks,
+    ...requirementBlocks,
+    ...enrichmentBlocks,
+  ].slice(0, MAX_BLOCKS);
 
-  // Guarantee at least the standard pathway so a draft is never empty.
-  if (pathways.size === 0) pathways.add("standard");
-  if (blocks.length === 0) {
+  // Assign real period labels + times now that ordering is final.
+  blocks.forEach((block, i) => {
+    const slot = BELL_SCHEDULE[i];
+    block.block_label = `${slot.label} (${slot.time})`;
+  });
+
+  // ---- Rationale ----------------------------------------------------------
+  for (const b of blocks) rationale.push(`${b.block_label}: ${b.course_name} — ${b.notes ?? ""}`);
+  if (needsIntervention) {
     rationale.push(
-      "No open graduation gaps detected — draft left empty for the counselor to add enrichment/elective choices."
+      `Intervention placement triggered by: ${interventionFindings.map((f) => f.reason).join("; ")}.`
+    );
+  } else {
+    rationale.push("No intervention signals detected (GPA, test scores, and credit pace all within range).");
+  }
+  const droppedCount =
+    gapBlocks.length + supportBlocks.length + requirementBlocks.length + enrichmentBlocks.length - blocks.length;
+  if (droppedCount > 0) {
+    warnings.push(
+      `${droppedCount} additional recommended course(s) did not fit in a ${MAX_BLOCKS}-period day and were left off — review and prioritize manually.`
     );
   }
 
-  return {
-    pathways: [...pathways],
-    blocks,
-    rationale,
-  };
+  // A student in intervention/credit recovery is not "standard" — only apply
+  // the standard pathway when nothing more specific fits.
+  if (pathways.size === 0) pathways.add("standard");
+  if (blocks.length === 0) {
+    rationale.push(
+      "No course blocks could be generated. Check that graduation requirements exist for this school year and that the student's transcript is loaded."
+    );
+  }
+
+  return { pathways: [...pathways], blocks, rationale, interventionFindings, warnings };
 }
