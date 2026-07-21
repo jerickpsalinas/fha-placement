@@ -4,7 +4,7 @@ import { listPendingApprovals } from "@/lib/queries";
 import Link from "next/link";
 
 export default async function ApprovalsPage() {
-  const staff = await requireRole(["admin"]);
+  const staff = await requireRole(["admin", "director"]);
   const pending = await listPendingApprovals();
 
   return (
