@@ -3,7 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import {
   getStudent, getTestScores, getTranscript, getSupportPlans,
   getOnlineLearningRecords, getGraduationRequirements, getSchedules, getEdgePathways,
-  getSteamModules, getSteamAssignments,
+  getSteamModules, getSteamAssignments, getGraduationRequirementYears,
 } from "@/lib/queries";
 import { runGraduationAudit } from "@/lib/audit/graduation";
 import { recommendEdgePathways } from "@/lib/recommendations/edge";
@@ -14,13 +14,14 @@ import Link from "next/link";
 import { DocumentUpload } from "./support-plans/DocumentUpload";
 import { AddSupportPlan } from "./support-plans/AddSupportPlan";
 
-const CURRENT_SCHOOL_YEAR = "2026-2027";
-
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const staff = await getCurrentStaff();
   const student = await getStudent(id);
   if (!student) notFound();
+
+  const requirementYears = await getGraduationRequirementYears();
+  const schoolYear = requirementYears[0] ?? "2026-2027";
 
   const [testScores, transcript, supportPlans, onlineRecords, requirements, schedules, edgePathways, steamModules, steamAssignments] =
     await Promise.all([
@@ -28,14 +29,14 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
       getTranscript(student.id),
       staff.role === "teacher" ? Promise.resolve([]) : getSupportPlans(student.id),
       getOnlineLearningRecords(student.id),
-      getGraduationRequirements(CURRENT_SCHOOL_YEAR),
+      getGraduationRequirements(schoolYear),
       getSchedules(student.id),
       getEdgePathways(student.id),
       getSteamModules(),
       getSteamAssignments(student.id),
     ]);
 
-  const audit = runGraduationAudit(transcript, requirements, onlineRecords, CURRENT_SCHOOL_YEAR, student.gpa);
+  const audit = runGraduationAudit(transcript, requirements, onlineRecords, schoolYear, student.gpa);
   const edgeRecs = recommendEdgePathways(student);
   const steamRecs = recommendSteamModules(student, steamModules);
   const schedulingAccommodations = supportPlans.flatMap((sp) =>
@@ -141,7 +142,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
         )}
 
         {/* GRADUATION AUDIT */}
-        <Section title={`Graduation Analysis (${CURRENT_SCHOOL_YEAR})`}>
+        <Section title={`Graduation Analysis (${schoolYear})`}>
           <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
             <Stat label="Credits Required" value={audit.totalCreditsRequired.toFixed(1)} />
             <Stat label="Credits Earned" value={audit.totalCreditsEarned.toFixed(1)} />
