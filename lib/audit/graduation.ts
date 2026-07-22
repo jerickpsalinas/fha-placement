@@ -68,9 +68,12 @@ export function runGraduationAudit(
     .filter((s) => !s.satisfied)
     .map((s) => `${s.subjectArea}: needs ${s.creditsRemaining.toFixed(2)} more credit(s)`);
 
+  // FL online-learning requirement is a one-time graduation gate: once met in
+  // ANY year it stays met. Check the audited year first for a fast path, then
+  // fall back to any prior year. .some() on an empty array correctly returns false.
   const onlineLearningRequirementMet = onlineLearningRecords.some(
     (r) => r.school_year === schoolYear && r.requirement_met
-  ) || onlineLearningRecords.some((r) => r.requirement_met); // met in any prior year still counts
+  ) || onlineLearningRecords.some((r) => r.requirement_met);
 
   if (!onlineLearningRequirementMet) {
     deficiencies.push("Online Learning Requirement: not yet completed");
