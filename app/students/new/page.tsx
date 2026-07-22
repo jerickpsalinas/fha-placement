@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { Sidebar } from "@/components/Sidebar";
 import { createStudent } from "@/app/students/actions";
+import { EDGE_PATHWAY_LABELS } from "@/types";
 
 const GRADES = ["K","1","2","3","4","5","6","7","8","9","10","11","12"];
 
@@ -53,10 +54,18 @@ export default async function NewStudentPage() {
 
           <Field label="Career Goals" name="career_goals" textarea />
           <Field label="College Goals" name="college_goals" textarea />
-          <Field
-            label="EDGE Interests (comma-separated, e.g. entrepreneurship, technology, public speaking)"
-            name="edge_interests"
-          />
+
+          <div>
+            <label className="block text-sm font-medium mb-2">EDGE Interests</label>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(EDGE_PATHWAY_LABELS).map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 text-sm border border-gray-200 rounded px-3 py-2">
+                  <input type="checkbox" name="edge_interests" value={value} className="rounded border-gray-300" />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
 
           <div className="pt-2">
             <button type="submit" className="bg-navy text-white text-sm font-medium px-5 py-2.5 rounded hover:bg-navy/90">

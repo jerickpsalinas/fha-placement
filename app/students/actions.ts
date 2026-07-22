@@ -27,9 +27,7 @@ export async function createStudent(formData: FormData) {
     dual_enrollment_active: formData.get("dual_enrollment_active") === "on",
     career_goals: formData.get("career_goals") || null,
     college_goals: formData.get("college_goals") || null,
-    edge_interests: formData.get("edge_interests")
-      ? String(formData.get("edge_interests")).split(",").map((s) => s.trim()).filter(Boolean)
-      : [],
+    edge_interests: formData.getAll("edge_interests").map(String).filter(Boolean),
   };
 
   if (!payload.first_name || !payload.last_name) {
