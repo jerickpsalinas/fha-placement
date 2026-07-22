@@ -59,13 +59,12 @@ const SUBJECT_TO_COURSE: Record<string, string> = {
  * These are a starting template — adjust to the school's actual bell times.
  */
 export const BELL_SCHEDULE: { label: string; time: string }[] = [
-  { label: "Period 1", time: "8:00–8:50" },
-  { label: "Period 2", time: "8:55–9:45" },
-  { label: "Period 3", time: "9:50–10:40" },
-  { label: "Period 4", time: "10:45–11:35" },
-  { label: "Period 5", time: "12:15–1:05" },
-  { label: "Period 6", time: "1:10–2:00" },
-  { label: "Period 7", time: "2:05–2:55" },
+  { label: "God First",  time: "8:30–9:00" },
+  { label: "Block 1",    time: "9:00–10:20" },
+  { label: "Block 2",    time: "10:30–11:50" },
+  { label: "Block 3",    time: "12:20–1:05" },
+  { label: "Block 4",    time: "1:05–1:55" },
+  { label: "Flex Block",  time: "1:55–2:30" },
 ];
 
 const MAX_BLOCKS = BELL_SCHEDULE.length;
@@ -318,16 +317,52 @@ export function generateDraftSchedule(
     });
   }
 
-  // ---- Assemble within the day, protecting support blocks -----------------
-  // Core gaps come first, but we reserve room for support + requirement blocks
-  // so a student with many gaps still gets their intervention/IEP period.
-  const reserved = Math.min(supportBlocks.length + requirementBlocks.length, MAX_BLOCKS - 1);
-  const blocks: GeneratedBlock[] = [
-    ...gapBlocks.slice(0, Math.max(1, MAX_BLOCKS - reserved)),
+  // ---- Assemble within the day, protecting anchored blocks -----------------
+  // God First is always first; Flex Block is always last. The 4 middle slots
+  // (Block 1–4) are filled from gap/support/requirement/enrichment tiers.
+  const MIDDLE_SLOTS = MAX_BLOCKS - 2; // exclude God First + Flex Block
+
+  const godFirstBlock: GeneratedBlock = {
+    block_label: "",
+    course_name: "God First / Bible",
+    course_category: "core",
+    is_online: false,
+    notes: "Fixed daily devotional and Bible instruction block.",
+  };
+
+  // Determine what goes in the Flex Block (last period).
+  let flexBlock: GeneratedBlock;
+  const flexIntervention = supportBlocks.shift();
+  if (flexIntervention) {
+    flexBlock = flexIntervention;
+  } else if (needsIntervention && interventionSubjects.size > 0) {
+    const firstSubject = [...interventionSubjects][0];
+    flexBlock = {
+      block_label: "",
+      course_name: `${firstSubject === "English/Language Arts" ? "Reading" : firstSubject} Intervention Lab`,
+      course_category: "intervention",
+      is_online: false,
+      notes: interventionFindings.filter((f) => f.subject === firstSubject).map((f) => f.reason).join("; ") || `Targeted support in ${firstSubject}`,
+    };
+  } else {
+    flexBlock = {
+      block_label: "",
+      course_name: "Academic Flex / Study Hall",
+      course_category: "elective",
+      is_online: false,
+      notes: "Open flex period — study hall, tutoring, or enrichment.",
+    };
+  }
+
+  const reserved = Math.min(supportBlocks.length + requirementBlocks.length, MIDDLE_SLOTS - 1);
+  const middleBlocks: GeneratedBlock[] = [
+    ...gapBlocks.slice(0, Math.max(1, MIDDLE_SLOTS - reserved)),
     ...supportBlocks,
     ...requirementBlocks,
     ...enrichmentBlocks,
-  ].slice(0, MAX_BLOCKS);
+  ].slice(0, MIDDLE_SLOTS);
+
+  const blocks: GeneratedBlock[] = [godFirstBlock, ...middleBlocks, flexBlock];
 
   // Assign real period labels + times now that ordering is final.
   blocks.forEach((block, i) => {
@@ -345,10 +380,10 @@ export function generateDraftSchedule(
     rationale.push("No intervention signals detected (GPA, test scores, and credit pace all within range).");
   }
   const droppedCount =
-    gapBlocks.length + supportBlocks.length + requirementBlocks.length + enrichmentBlocks.length - blocks.length;
+    gapBlocks.length + supportBlocks.length + requirementBlocks.length + enrichmentBlocks.length - middleBlocks.length;
   if (droppedCount > 0) {
     warnings.push(
-      `${droppedCount} additional recommended course(s) did not fit in a ${MAX_BLOCKS}-period day and were left off — review and prioritize manually.`
+      `${droppedCount} additional recommended course(s) did not fit in a ${MIDDLE_SLOTS}-block schedule and were left off — review and prioritize manually.`
     );
   }
 
