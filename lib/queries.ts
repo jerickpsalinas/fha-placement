@@ -10,7 +10,7 @@ export async function listStudents(): Promise<Student[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("students")
-    .select("*")
+    .select("id, first_name, last_name, grade_level, gpa, credits_earned, has_iep, has_504, dual_enrollment_active, active")
     .eq("active", true)
     .order("last_name", { ascending: true });
 
@@ -82,7 +82,7 @@ export async function getSchedules(studentId: string): Promise<Schedule[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("schedules")
-    .select("*")
+    .select("id, student_id, school_year, pathways, status, created_at, updated_at, admin_notes, created_by, approved_by, approved_at, submitted_at, generated_by, rejection_reason")
     .eq("student_id", studentId)
     .order("created_at", { ascending: false });
   if (error) throw error;

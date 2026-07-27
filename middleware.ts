@@ -27,7 +27,10 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // getSession() reads the JWT from the cookie locally — no network call.
+  // Page-level auth (getCurrentStaff) still calls getUser() for a verified check.
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   const isPublicRoute =
     request.nextUrl.pathname.startsWith("/login") ||

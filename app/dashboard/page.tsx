@@ -58,23 +58,20 @@ export default async function DashboardPage() {
 
   const { staff } = result;
 
-  let students: Awaited<ReturnType<typeof listStudents>> = [];
-  let studentsError: string | null = null;
-  try {
-    students = await listStudents();
-  } catch (err) {
-    studentsError = err instanceof Error ? err.message : "Failed to load students.";
-  }
+  const [studentsResult, pendingResult] = await Promise.allSettled([
+    listStudents(),
+    staff.role === "admin" ? listPendingApprovals() : Promise.resolve([]),
+  ]);
 
-  let pending: Awaited<ReturnType<typeof listPendingApprovals>> = [];
-  let pendingError: string | null = null;
-  if (staff.role === "admin") {
-    try {
-      pending = await listPendingApprovals();
-    } catch (err) {
-      pendingError = err instanceof Error ? err.message : "Failed to load pending approvals.";
-    }
-  }
+  const students = studentsResult.status === "fulfilled" ? studentsResult.value : [];
+  const studentsError = studentsResult.status === "rejected"
+    ? (studentsResult.reason instanceof Error ? studentsResult.reason.message : "Failed to load students.")
+    : null;
+
+  const pending = pendingResult.status === "fulfilled" ? pendingResult.value : [];
+  const pendingError = pendingResult.status === "rejected"
+    ? (pendingResult.reason instanceof Error ? pendingResult.reason.message : "Failed to load pending approvals.")
+    : null;
 
   const withIep = students.filter((s) => s.has_iep).length;
   const with504 = students.filter((s) => s.has_504).length;
