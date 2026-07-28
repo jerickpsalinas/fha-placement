@@ -10,8 +10,15 @@ import {
 
 const COURSE_CATEGORIES = [
   "core", "honors", "intervention", "credit_recovery", "elective",
-  "steam", "edge", "act_sat_prep", "online", "dual_enrollment",
+  "steam", "edge", "act_sat_prep", "online", "dual_enrollment", "lunch",
 ];
+
+const LEVEL_BADGE_COLORS: Record<string, string> = {
+  intervention: "bg-red-100 text-red-800",
+  on_level: "bg-gray-100 text-gray-700",
+  advanced: "bg-green-100 text-green-800",
+  whole_group: "bg-blue-100 text-blue-700",
+};
 
 export default async function ScheduleDetailPage({
   params,
@@ -125,6 +132,7 @@ export default async function ScheduleDetailPage({
                 <tr>
                   <th className="text-left px-2 py-1.5">Block</th>
                   <th className="text-left px-2 py-1.5">Course</th>
+                  <th className="text-left px-2 py-1.5">Level</th>
                   <th className="text-left px-2 py-1.5">Category</th>
                   <th className="text-left px-2 py-1.5">Online</th>
                   <th className="text-left px-2 py-1.5">Notes</th>
@@ -135,6 +143,13 @@ export default async function ScheduleDetailPage({
                   <tr key={b.id} className="border-t border-gray-100">
                     <td className="px-2 py-1.5">{b.block_label}</td>
                     <td className="px-2 py-1.5">{b.course_name}</td>
+                    <td className="px-2 py-1.5">
+                      {b.placement_level ? (
+                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${LEVEL_BADGE_COLORS[b.placement_level] ?? "bg-gray-100 text-gray-600"}`}>
+                          {b.placement_level.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                        </span>
+                      ) : "—"}
+                    </td>
                     <td className="px-2 py-1.5 capitalize">{b.course_category.replace("_", " ")}</td>
                     <td className="px-2 py-1.5">{b.is_online ? "Yes" : "—"}</td>
                     <td className="px-2 py-1.5 text-gray-500">{b.notes ?? "—"}</td>

@@ -13,6 +13,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { DocumentUpload } from "./support-plans/DocumentUpload";
 import { AddSupportPlan } from "./support-plans/AddSupportPlan";
+import { placeStudent } from "@/lib/placement/engine";
+import { PLACEMENT_LEVEL_LABELS } from "@/lib/placement/norms";
 
 export default async function StudentProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,6 +41,7 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
   const audit = runGraduationAudit(transcript, requirements, onlineRecords, schoolYear, student.gpa);
   const edgeRecs = recommendEdgePathways(student);
   const steamRecs = recommendSteamModules(student, steamModules);
+  const { placements, warnings: placementWarnings } = placeStudent(student, testScores);
   const schedulingAccommodations = supportPlans.flatMap((sp) =>
     sp.accommodations.filter((a) => a.affects_scheduling)
   );
@@ -140,6 +143,41 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             )}
           </Section>
         )}
+
+        {/* CURRENT PLACEMENT */}
+        <Section title="Current Placement">
+          {placementWarnings.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm text-amber-800 mb-4">
+              {placementWarnings.map((w, i) => <p key={i}>{w}</p>)}
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {placements.filter((p) => p.level !== "whole_group").map((p) => {
+              const colors: Record<string, string> = {
+                intervention: "border-red-300 bg-red-50",
+                on_level: "border-gray-200 bg-white",
+                advanced: "border-green-300 bg-green-50",
+              };
+              const badgeColors: Record<string, string> = {
+                intervention: "bg-red-100 text-red-800",
+                on_level: "bg-gray-100 text-gray-700",
+                advanced: "bg-green-100 text-green-800",
+              };
+              return (
+                <div key={p.subject} className={`border rounded-lg p-3 ${colors[p.level] ?? ""}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-navy">{p.subject}</span>
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${badgeColors[p.level] ?? ""}`}>
+                      {PLACEMENT_LEVEL_LABELS[p.level]}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700">{p.courseName}</p>
+                  <p className="text-xs text-gray-500 mt-1">{p.why}</p>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
 
         {/* GRADUATION AUDIT */}
         <Section title={`Graduation Analysis (${schoolYear})`}>

@@ -146,6 +146,7 @@ export interface ScheduleBlock {
   course_category: string;
   is_online: boolean;
   notes: string | null;
+  placement_level: string | null;
 }
 
 export type EdgePathway =
