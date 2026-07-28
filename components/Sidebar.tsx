@@ -25,6 +25,12 @@ export function Sidebar({ staff }: { staff: StaffProfile }) {
             Import CSV
           </Link>
         )}
+        <Link href="/placement" className="block px-3 py-2 rounded hover:bg-white/10">
+          Placement Guide
+        </Link>
+        <Link href="/records" className="block px-3 py-2 rounded hover:bg-white/10">
+          Records &amp; Transcripts
+        </Link>
         {staff.role === "admin" && (
           <Link href="/admin/approvals" className="block px-3 py-2 rounded hover:bg-white/10">
             Approval Queue
