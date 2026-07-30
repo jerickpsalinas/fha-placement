@@ -32,7 +32,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
 
 export function Sidebar({ staff }: { staff: StaffProfile }) {
   return (
-    <aside className="w-56 bg-navy text-white min-h-screen p-5 flex flex-col">
+    <aside className="w-56 bg-navy text-white h-screen sticky top-0 p-5 flex flex-col overflow-y-auto">
       <div className="mb-8">
         <p className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Father&apos;s Harbor Academy</p>
         <p className="font-semibold leading-tight text-gold font-serif">Placement &amp; Schedule Builder</p>
