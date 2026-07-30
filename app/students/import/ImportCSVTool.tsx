@@ -9,18 +9,45 @@ import { Button } from "@/components/ui/Button";
 
 type ImportKind = "roster" | "test_scores" | "transcript";
 
-const TEMPLATES: Record<ImportKind, { columns: string[]; description: string }> = {
+const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[]; description: string }> = {
   roster: {
-    columns: ["first_name", "last_name", "grade_level", "enrollment_type", "date_of_birth", "gpa", "credits_earned"],
-    description: "Bulk-add new students.",
+    description: "Bulk-add new students. One row per student.",
+    columns: [
+      { name: "first_name", hint: "Student's first name" },
+      { name: "last_name", hint: "Student's last name" },
+      { name: "grade_level", hint: "K, 1, 2, ... 12" },
+      { name: "enrollment_type", hint: "private_continuing or public_transfer" },
+      { name: "date_of_birth", hint: "YYYY-MM-DD" },
+      { name: "gpa", hint: "0.0 – 4.0 (leave blank if unknown)" },
+      { name: "credits_earned", hint: "Number of credits earned so far" },
+    ],
   },
   test_scores: {
-    columns: ["student_first_name", "student_last_name", "test_type", "subject", "score", "percentile", "test_date", "school_year"],
-    description: "MAP, FAST, IXL, ACT, or SAT scores. test_type must be one of MAP, FAST, IXL, ACT, SAT.",
+    description: "MAP, FAST, IXL, ACT, or SAT scores. One row per test result.",
+    columns: [
+      { name: "student_first_name", hint: "Must match an existing student" },
+      { name: "student_last_name", hint: "Must match an existing student" },
+      { name: "test_type", hint: "MAP, FAST, IXL, ACT, or SAT" },
+      { name: "subject", hint: "e.g. Math, Reading" },
+      { name: "score", hint: "Raw score (e.g. RIT score)" },
+      { name: "percentile", hint: "0 – 99 (leave blank if unknown)" },
+      { name: "test_date", hint: "YYYY-MM-DD" },
+      { name: "school_year", hint: "e.g. 2026-2027" },
+    ],
   },
   transcript: {
-    columns: ["student_first_name", "student_last_name", "course_name", "subject_area", "credit_value", "grade", "school_year", "is_online", "is_dual_enrollment"],
-    description: "Transcript / course history entries. subject_area should match a graduation requirement category (e.g. English, Math, Science).",
+    description: "Transcript / course history entries. One row per course.",
+    columns: [
+      { name: "student_first_name", hint: "Must match an existing student" },
+      { name: "student_last_name", hint: "Must match an existing student" },
+      { name: "course_name", hint: "e.g. Algebra 1" },
+      { name: "subject_area", hint: "e.g. Mathematics, English, Science" },
+      { name: "credit_value", hint: "e.g. 1.0, 0.5" },
+      { name: "grade", hint: "Letter grade earned, e.g. A, B+" },
+      { name: "school_year", hint: "e.g. 2026-2027" },
+      { name: "is_online", hint: "true or false" },
+      { name: "is_dual_enrollment", hint: "true or false" },
+    ],
   },
 };
 
@@ -82,16 +109,33 @@ export function ImportCSVTool() {
             </select>
           </div>
 
-          <div className="bg-cream border border-hairline rounded p-3 text-xs text-navy/70">
-            <p className="font-semibold mb-1 text-navy">Expected columns:</p>
-            <code className="block break-all">{TEMPLATES[kind].columns.join(", ")}</code>
-            <p className="mt-2">{TEMPLATES[kind].description}</p>
+          <div className="bg-cream border border-hairline rounded p-3">
+            <p className="font-semibold mb-2 text-navy text-xs">Expected columns</p>
+            <p className="text-xs text-navy/60 mb-3">{TEMPLATES[kind].description} Column names in your CSV's header row must match exactly (order doesn't matter).</p>
+            <div className="space-y-1">
+              {TEMPLATES[kind].columns.map((c) => (
+                <div key={c.name} className="flex gap-2 text-xs">
+                  <code className="bg-white border border-hairline rounded px-1.5 py-0.5 text-navy shrink-0">{c.name}</code>
+                  <span className="text-navy/60">{c.hint}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
             <label className="block text-[10px] font-semibold text-navy mb-1">CSV File</label>
-            <input type="file" accept=".csv" onChange={handleFile} className="text-sm" />
-            {fileName && <p className="text-xs text-navy/50 mt-1">{fileName} — {rows.length} row(s) parsed</p>}
+            <div className="border-2 border-dashed border-hairline rounded-lg p-6 text-center">
+              <input type="file" accept=".csv" onChange={handleFile} className="hidden" id="csv-file-input" />
+              <label htmlFor="csv-file-input" className="cursor-pointer">
+                <div className="text-sm text-navy/60">
+                  {fileName ? (
+                    <span className="font-medium text-navy">{fileName} — {rows.length} row(s) parsed</span>
+                  ) : (
+                    <>Drop a CSV here or <span className="text-gold font-semibold underline">click to browse</span></>
+                  )}
+                </div>
+              </label>
+            </div>
           </div>
 
           {rows.length > 0 && (

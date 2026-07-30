@@ -107,8 +107,18 @@ export function ImportPdfTool() {
 
         <div>
           <label className="block text-[10px] font-semibold text-navy mb-1">Transcript / Report Card PDF</label>
-          <input type="file" accept="application/pdf,.pdf" onChange={handleFile} className="text-sm" disabled={extracting} />
-          {fileName && <p className="text-xs text-navy/50 mt-1">{fileName}{extracting ? " — extracting…" : ""}</p>}
+          <div className="border-2 border-dashed border-hairline rounded-lg p-6 text-center">
+            <input type="file" accept="application/pdf,.pdf" onChange={handleFile} className="hidden" id="pdf-file-input" disabled={extracting} />
+            <label htmlFor="pdf-file-input" className={extracting ? "cursor-wait" : "cursor-pointer"}>
+              <div className="text-sm text-navy/60">
+                {fileName ? (
+                  <span className="font-medium text-navy">{fileName}{extracting ? " — extracting…" : ""}</span>
+                ) : (
+                  <>Drop a PDF here or <span className="text-gold font-semibold underline">click to browse</span></>
+                )}
+              </div>
+            </label>
+          </div>
         </div>
 
         {status && <p className={`text-sm ${saved ? "text-advanced" : "text-navy/70"}`}>{status}</p>}
