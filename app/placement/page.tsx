@@ -7,7 +7,7 @@ export default async function PlacementPage() {
   return (
     <div className="flex">
       <Sidebar staff={staff} />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1">
         <PlacementGuide />
       </main>
     </div>

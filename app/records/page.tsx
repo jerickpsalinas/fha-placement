@@ -7,7 +7,7 @@ export default async function RecordsPage() {
   return (
     <div className="flex">
       <Sidebar staff={staff} />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1">
         <RecordsTool />
       </main>
     </div>
