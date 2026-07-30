@@ -52,14 +52,15 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-8 border border-gray-200">
-        <h1 className="text-xl font-bold text-navy mb-1">Father&apos;s H.A.R.B.O.R. Academy</h1>
-        <p className="text-sm text-gray-500 mb-6">Staff Placement &amp; Schedule Builder</p>
+    <div className="min-h-screen flex items-center justify-center px-4 bg-navy">
+      <div className="w-full max-w-sm bg-white rounded-lg shadow-md p-8 border border-hairline">
+        <p className="text-[10px] uppercase tracking-[.15em] text-gold font-bold mb-2">Father&apos;s Harbor Academy</p>
+        <h1 className="text-xl font-bold text-navy mb-1 font-serif">Staff Placement &amp; Schedule Builder</h1>
+        <p className="text-sm text-navy/50 mb-6">Sign in to continue</p>
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1" htmlFor="email">
+            <label className="block text-[10px] font-semibold text-navy mb-1" htmlFor="email">
               Email
             </label>
             <input
@@ -68,11 +69,11 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
+              className="w-full rounded border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1" htmlFor="password">
+            <label className="block text-[10px] font-semibold text-navy mb-1" htmlFor="password">
               Password
             </label>
             <input
@@ -81,22 +82,22 @@ function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-navy"
+              className="w-full rounded border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold"
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-intervention">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-navy text-white rounded py-2 text-sm font-medium hover:bg-navy/90 disabled:opacity-60"
+            className="w-full bg-navy text-gold rounded py-2 text-sm font-bold hover:opacity-90 disabled:opacity-60"
           >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 mt-6">
+        <p className="text-xs text-navy/40 mt-6">
           Staff accounts are created by an administrator. Contact your admin if you need access.
         </p>
       </div>

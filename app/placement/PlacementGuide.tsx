@@ -204,7 +204,7 @@ export function PlacementGuide() {
   ];
 
   return (
-    <div className="flex min-h-screen" style={{ fontFamily: "'Poppins', sans-serif" }}>
+    <div className="flex min-h-screen">
       {/* Left nav */}
       <nav className="w-[230px] bg-[#0D1B2E] text-white p-5 flex flex-col fixed left-56 top-0 bottom-0 overflow-y-auto z-10 print:hidden">
         <div className="mb-6">
@@ -241,7 +241,7 @@ export function PlacementGuide() {
         {/* Hero banner */}
         <div className="bg-[#0D1B2E] px-8 py-10 text-white">
           <p className="text-[10px] uppercase tracking-[.15em] text-[#C9A84C] font-bold mb-2">Father&apos;s Harbor Academy</p>
-          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Lora', serif" }}>
+          <h1 className="text-2xl font-bold font-serif">
             Student Placement &amp; STEAM Planner
           </h1>
           <p className="text-[11px] text-white/60 mt-2 max-w-xl">
@@ -314,7 +314,7 @@ export function PlacementGuide() {
                         borderLeftColor: lvl <= 2 ? "#9B4E00" : lvl <= 4 ? "#0F4C8A" : "#2E6B7A",
                         background: lvl <= 2 ? "#FEF3E3" : lvl <= 4 ? "#E8F0FB" : "#EAF3F6",
                       }}>
-                        <div className="text-lg font-bold" style={{ fontFamily: "'Lora', serif" }}>{lvl}</div>
+                        <div className="text-lg font-bold font-serif">{lvl}</div>
                         <div className="text-[9px] text-[#666]">{FAST_LEVEL_DESCRIPTIONS[lvl]?.split("—")[0]?.trim()}</div>
                       </div>
                     ))}
@@ -359,7 +359,7 @@ export function PlacementGuide() {
                 {/* Banner */}
                 <div className="bg-[#0D1B2E] px-5 py-4 flex items-center justify-between">
                   <div>
-                    <div className="text-base font-bold text-white" style={{ fontFamily: "'Lora', serif" }}>{result.name}</div>
+                    <div className="text-base font-bold text-white font-serif">{result.name}</div>
                     <div className="text-[11px] text-white/60">
                       {result.testLabel} · <span className="text-[#639922]">{testType}</span>
                     </div>
@@ -457,7 +457,7 @@ export function PlacementGuide() {
 function SectionHead({ num, title, sub }: { num: string; title: string; sub: string }) {
   return (
     <div className="flex items-start gap-3 mb-4">
-      <div className="text-[20px] font-bold text-[#C9A84C]" style={{ fontFamily: "'Lora', serif" }}>{num}</div>
+      <div className="text-[20px] font-bold text-[#C9A84C] font-serif">{num}</div>
       <div>
         <div className="text-base font-bold text-[#0D1B2E]">{title}</div>
         <div className="text-[11px] text-[#666]">{sub}</div>
@@ -604,7 +604,7 @@ function CreditRequirements() {
       {/* Elementary */}
       <div className="rounded-lg overflow-hidden border border-[#DDD8CC]">
         <div className="bg-[#0D1B2E] px-5 py-3">
-          <span className="text-[13px] font-bold text-[#C9A84C]" style={{ fontFamily: "'Lora', serif" }}>Elementary — Grades K–5</span>
+          <span className="text-[13px] font-bold text-[#C9A84C] font-serif">Elementary — Grades K–5</span>
           <span className="text-[10px] text-white/50 ml-3">Mastery-based promotion, no Carnegie credits</span>
         </div>
         <div className="bg-white p-4 overflow-x-auto">
@@ -640,7 +640,7 @@ function CreditRequirements() {
       {/* Middle School */}
       <div className="rounded-lg overflow-hidden border border-[#DDD8CC]">
         <div className="bg-[#0D1B2E] px-5 py-3">
-          <span className="text-[13px] font-bold text-[#C9A84C]" style={{ fontFamily: "'Lora', serif" }}>Middle School — Grades 6–8</span>
+          <span className="text-[13px] font-bold text-[#C9A84C] font-serif">Middle School — Grades 6–8</span>
           <span className="text-[10px] text-white/50 ml-3">Carnegie credits begin — 1.0 per subject per year</span>
         </div>
         <div className="bg-white p-4 overflow-x-auto">
@@ -676,7 +676,7 @@ function CreditRequirements() {
       {/* High School */}
       <div className="rounded-lg overflow-hidden border border-[#DDD8CC]">
         <div className="bg-[#0D1B2E] px-5 py-3">
-          <span className="text-[13px] font-bold text-[#C9A84C]" style={{ fontFamily: "'Lora', serif" }}>High School — Grades 9–12</span>
+          <span className="text-[13px] font-bold text-[#C9A84C] font-serif">High School — Grades 9–12</span>
           <span className="text-[10px] text-white/50 ml-3">24 total credits for graduation</span>
         </div>
         <div className="bg-white p-4 overflow-x-auto">
@@ -819,7 +819,7 @@ function SteamGrid({ band }: { band: "K-2" | "3-5" | "6-8" | "9-12" }) {
         <div key={m.month} className="bg-white border border-[#DDD8CC] rounded-xl overflow-hidden">
           <div className="bg-[#0D1B2E] px-4 py-3">
             <div className="text-[9px] font-bold text-[#5B9BAF] uppercase tracking-wider">{m.month}</div>
-            <div className="text-base font-bold text-white" style={{ fontFamily: "'Lora', serif" }}>{m.theme}</div>
+            <div className="text-base font-bold text-white font-serif">{m.theme}</div>
             {m.kit && (
               <div className="mt-1.5">
                 <span className="bg-[#C9A84C] text-[#0D1B2E] text-[10px] font-bold px-2.5 py-0.5 rounded">

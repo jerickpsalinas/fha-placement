@@ -152,7 +152,7 @@ export function RecordsTool() {
       {/* Hero */}
       <div className="bg-[#0D1B2E] px-8 py-8 text-white">
         <p className="text-[10px] uppercase tracking-[.15em] text-[#C9A84C] font-bold mb-2">Father&apos;s Harbor Academy</p>
-        <h1 className="text-2xl font-bold" style={{ fontFamily: "'Lora', serif" }}>
+        <h1 className="text-2xl font-bold font-serif">
           Records, Transcripts &amp; College Planning
         </h1>
         <p className="text-[11px] text-white/60 mt-2 max-w-xl">
@@ -264,7 +264,7 @@ function StatRow({ items }: { items: [string | number, string, string][] }) {
     <div className="flex flex-wrap gap-3 mb-4">
       {items.map(([val, label, color]) => (
         <div key={label} className="bg-white border border-[#DDD8CC] rounded-lg px-4 py-3 min-w-[100px]">
-          <div className={`text-lg font-bold ${statColor(color)}`} style={{ fontFamily: "'Lora', serif" }}>{val}</div>
+          <div className={`text-lg font-bold ${statColor(color)} font-serif`}>{val}</div>
           <div className="text-[9px] text-[#777] uppercase font-semibold tracking-wide">{label}</div>
         </div>
       ))}
