@@ -82,7 +82,7 @@ export async function getSchedules(studentId: string): Promise<Schedule[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("schedules")
-    .select("id, student_id, school_year, pathways, status, created_at, updated_at, admin_notes, created_by, approved_by, approved_at, submitted_at, generated_by, rejection_reason")
+    .select("id, student_id, school_year, pathways, status, created_at, updated_at, admin_notes, approved_by, approved_at, generated_by, rejection_reason")
     .eq("student_id", studentId)
     .order("created_at", { ascending: false });
   if (error) throw error;
