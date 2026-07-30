@@ -204,57 +204,44 @@ export function PlacementGuide() {
   ];
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left nav */}
-      <nav className="w-[230px] bg-[#0D1B2E] text-white p-5 flex flex-col fixed left-56 top-0 bottom-0 overflow-y-auto z-10 print:hidden">
-        <div className="mb-6">
-          <p className="text-[10px] uppercase tracking-widest text-white/50 mb-1">Father&apos;s Harbor Academy</p>
-          <p className="text-sm font-semibold text-[#C9A84C]">Placement &amp; STEAM Planner</p>
-          <p className="text-[10px] text-white/40 mt-1">Jacksonville, FL · K-12 · Christ-Centered STEAM</p>
-        </div>
-        <div className="space-y-1 flex-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                setActiveSection(item.id);
-                document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className={`w-full text-left px-3 py-2 rounded text-[11px] flex items-center gap-2 transition ${
-                activeSection === item.id ? "bg-white/10 text-[#C9A84C]" : "text-white/70 hover:bg-white/5"
-              }`}
-            >
-              <span className="text-[9px] font-bold text-[#C9A84C]">{item.num}</span>
-              {item.label}
-            </button>
+    <div className="min-h-screen bg-[#F7F6F2]">
+      {/* Hero banner */}
+      <div className="bg-[#0D1B2E] px-8 py-10 text-white">
+        <p className="text-[10px] uppercase tracking-[.15em] text-[#C9A84C] font-bold mb-2">Father&apos;s Harbor Academy</p>
+        <h1 className="text-2xl font-bold font-serif">
+          Student Placement &amp; STEAM Planner
+        </h1>
+        <p className="text-[11px] text-white/60 mt-2 max-w-xl">
+          Individualized academic plans driven by MAP Growth RIT scores or FAST achievement levels.
+          Every subject placed independently — a low score in one area never holds a student back in another.
+        </p>
+        <div className="flex flex-wrap gap-2 mt-4">
+          {["God First Daily", "Chapel Wednesdays", "8:00 AM – 2:30 PM", "Individualized by Subject"].map((pill) => (
+            <span key={pill} className="text-[9px] bg-white/10 text-white/80 px-3 py-1 rounded-full">{pill}</span>
           ))}
         </div>
-        <div className="text-[9px] text-white/30 pt-4 border-t border-white/10 space-y-1">
-          <p>School Day: 8:00 AM – 2:30 PM</p>
-          <p>God First: 8:00 – 8:30 Daily</p>
-          <p>Chapel: Wednesdays 8:00 – 9:00</p>
-        </div>
-      </nav>
+      </div>
 
-      {/* Main content */}
-      <div className="flex-1 ml-[230px] bg-[#F7F6F2]">
-        {/* Hero banner */}
-        <div className="bg-[#0D1B2E] px-8 py-10 text-white">
-          <p className="text-[10px] uppercase tracking-[.15em] text-[#C9A84C] font-bold mb-2">Father&apos;s Harbor Academy</p>
-          <h1 className="text-2xl font-bold font-serif">
-            Student Placement &amp; STEAM Planner
-          </h1>
-          <p className="text-[11px] text-white/60 mt-2 max-w-xl">
-            Individualized academic plans driven by MAP Growth RIT scores or FAST achievement levels.
-            Every subject placed independently — a low score in one area never holds a student back in another.
-          </p>
-          <div className="flex flex-wrap gap-2 mt-4">
-            {["God First Daily", "Chapel Wednesdays", "8:00 AM – 2:30 PM", "Individualized by Subject"].map((pill) => (
-              <span key={pill} className="text-[9px] bg-white/10 text-white/80 px-3 py-1 rounded-full">{pill}</span>
-            ))}
-          </div>
-        </div>
+      {/* Section tabs */}
+      <div className="sticky top-0 z-10 bg-[#0D1B2E] px-8 py-2 flex gap-1.5 print:hidden overflow-x-auto">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => {
+              setActiveSection(item.id);
+              document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className={`shrink-0 text-left px-3 py-2 rounded text-[11px] flex items-center gap-2 transition ${
+              activeSection === item.id ? "bg-white/10 text-[#C9A84C]" : "text-white/70 hover:bg-white/5"
+            }`}
+          >
+            <span className="text-[9px] font-bold text-[#C9A84C]">{item.num}</span>
+            {item.label}
+          </button>
+        ))}
+      </div>
 
+      <div>
         <div className="p-8 space-y-10 max-w-5xl">
           {/* SECTION 01: Placement Engine */}
           <section id="placement">
