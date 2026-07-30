@@ -666,7 +666,7 @@ function CreditRequirements() {
       <div className="rounded-lg overflow-hidden border border-[#DDD8CC]">
         <div className="bg-[#0D1B2E] px-5 py-3">
           <span className="text-[13px] font-bold text-[#C9A84C] font-serif">High School — Grades 9–12</span>
-          <span className="text-[10px] text-white/50 ml-3">24 total credits for graduation</span>
+          <span className="text-[10px] text-white/50 ml-3">24 total credits for graduation (Florida BEST Standards)</span>
         </div>
         <div className="bg-white p-4 overflow-x-auto">
           <table className="w-full text-[11px] border-collapse">
@@ -684,12 +684,10 @@ function CreditRequirements() {
                 ["Mathematics", "4.0", "req", "Algebra 1, Geometry, Algebra 2 + 1 elective"],
                 ["Science", "3.0", "req", "Biology I + 2 lab sciences"],
                 ["Social Studies", "3.0", "req", "World History, U.S. History, U.S. Gov/Econ"],
-                ["God First / Bible", "1.0", "fha", "Bible each year (FHA requirement)"],
-                ["Physical Education", "1.0", "req", "PE / Health"],
-                ["Fine/Performing Arts", "1.0", "req", "1 credit any arts course"],
-                ["STEAM", "1.0", "fha", "Monthly T&K modules + capstone"],
-                ["Electives", "5.0", "elec", "Includes online course requirement (0.5 cr)"],
-                ["Online Course", "0.5+", "req", "FL Statute 1003.4282 — any provider"],
+                ["Physical Education (HOPE)", "1.0", "req", "PE / Health"],
+                ["Fine Arts / Practical Arts / CTE", "1.0", "req", "1 credit any arts, practical arts, or CTE course"],
+                ["Personal Financial Literacy", "0.5", "req", "Financial Literacy & Money Management"],
+                ["Electives", "7.5", "elec", "Includes online course requirement — any provider, FL Statute 1003.4282"],
               ].map(([subj, credits, type, courses]) => (
                 <tr key={subj} className="border-b border-[#DDD8CC]">
                   <td className="px-2.5 py-2 font-medium">{subj}</td>
@@ -698,8 +696,31 @@ function CreditRequirements() {
                   <td className="px-2.5 py-2">{courses}</td>
                 </tr>
               ))}
+              <tr className="border-t-2 border-[#0D1B2E] font-bold">
+                <td className="px-2.5 py-2">Florida Total</td>
+                <td className="px-2.5 py-2">24.0</td>
+                <td className="px-2.5 py-2"></td>
+                <td className="px-2.5 py-2"></td>
+              </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* FHA Additional Graduation Expectations */}
+      <div className="rounded-lg overflow-hidden border border-[#DDD8CC]">
+        <div className="bg-[#0D1B2E] px-5 py-3">
+          <span className="text-[13px] font-bold text-[#C9A84C] font-serif">FHA Additional Graduation Expectations</span>
+          <span className="text-[10px] text-white/50 ml-3">School requirements — tracked separately from the 24-credit Florida audit</span>
+        </div>
+        <div className="bg-white p-4">
+          <ul className="text-[11px] text-[#444] space-y-2">
+            <li><span className="font-medium text-[#0D1B2E]">Bible:</span> 1 credit each year (4 total) — FHA institutional requirement</li>
+            <li><span className="font-medium text-[#0D1B2E]">STEAM:</span> Not a separate graduation credit — embedded throughout the curriculum monthly, tracked via participation</li>
+            <li><span className="font-medium text-[#0D1B2E]">Community Service / Service Learning:</span> If applicable</li>
+            <li><span className="font-medium text-[#0D1B2E]">Senior Capstone:</span> If applicable</li>
+            <li><span className="font-medium text-[#0D1B2E]">World Language:</span> Optional for graduation. Strongly recommended for students planning to attend a four-year university (2 credits of the same language) — tracked as a college-readiness indicator, not a diploma requirement</li>
+          </ul>
         </div>
       </div>
     </div>

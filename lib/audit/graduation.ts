@@ -9,12 +9,31 @@ export interface SubjectAreaAudit {
   notes: string | null;
 }
 
+/**
+ * FHA-specific graduation expectations that sit OUTSIDE the Florida 24-credit
+ * count (per client confirmation): Bible is a required institutional credit
+ * tracked on its own, while World Language/Community Service/Senior Capstone
+ * are informational-only (not required, or not yet trackable from available
+ * data) — creditsRequired/satisfied are null when not applicable.
+ */
+export interface InstitutionalRequirement {
+  key: string;
+  label: string;
+  creditsRequired: number | null;
+  creditsEarned: number | null;
+  satisfied: boolean | null;
+  note: string;
+}
+
+const BIBLE_CREDITS_REQUIRED = 4.0;
+
 export interface GraduationAudit {
   schoolYear: string;
   totalCreditsRequired: number;
   totalCreditsEarned: number;
   totalCreditsRemaining: number;
   subjectAreas: SubjectAreaAudit[];
+  institutionalRequirements: InstitutionalRequirement[];
   onlineLearningRequirementMet: boolean;
   deficiencies: string[];
   scholarshipReadinessFlags: string[];
@@ -57,10 +76,14 @@ export function runGraduationAudit(
       };
     });
 
+  // Bible and World Language are tracked separately (institutionalRequirements
+  // below) and must not inflate the Florida 24-credit total as "extra" credits.
+  const NON_FLORIDA_SUBJECT_AREAS = new Set(["God First/Bible", "World Language"]);
+
   const totalCreditsRequired = subjectAreas.reduce((sum, s) => sum + s.creditsRequired, 0);
   const totalCreditsEarned = subjectAreas.reduce((sum, s) => sum + Math.min(s.creditsEarned, s.creditsRequired), 0)
     + transcript
-        .filter((e) => !requirements.some((r) => r.subject_area === e.subject_area))
+        .filter((e) => !requirements.some((r) => r.subject_area === e.subject_area) && !NON_FLORIDA_SUBJECT_AREAS.has(e.subject_area))
         .reduce((sum, e) => sum + Number(e.credit_value), 0); // uncategorized/extra credits still count toward total
   const totalCreditsRemaining = Math.max(0, totalCreditsRequired - totalCreditsEarned);
 
@@ -97,12 +120,51 @@ export function runGraduationAudit(
     );
   }
 
+  const bibleCreditsEarned = creditsBySubject.get("God First/Bible") ?? 0;
+  const worldLanguageCreditsEarned = creditsBySubject.get("World Language") ?? 0;
+
+  const institutionalRequirements: InstitutionalRequirement[] = [
+    {
+      key: "bible",
+      label: "Bible",
+      creditsRequired: BIBLE_CREDITS_REQUIRED,
+      creditsEarned: bibleCreditsEarned,
+      satisfied: bibleCreditsEarned >= BIBLE_CREDITS_REQUIRED,
+      note: "FHA institutional requirement — 1 credit each year, 4 total. Not part of the Florida 24-credit count.",
+    },
+    {
+      key: "world_language",
+      label: "World Language",
+      creditsRequired: null,
+      creditsEarned: worldLanguageCreditsEarned,
+      satisfied: null,
+      note: "Optional for graduation. Recommended for students planning to attend a four-year university (2 credits of the same language) — tracked as a college-readiness indicator.",
+    },
+    {
+      key: "community_service",
+      label: "Community Service / Service Learning",
+      creditsRequired: null,
+      creditsEarned: null,
+      satisfied: null,
+      note: "If applicable — not yet tracked in this system.",
+    },
+    {
+      key: "senior_capstone",
+      label: "Senior Capstone",
+      creditsRequired: null,
+      creditsEarned: null,
+      satisfied: null,
+      note: "If applicable — not yet tracked in this system.",
+    },
+  ];
+
   return {
     schoolYear,
     totalCreditsRequired,
     totalCreditsEarned,
     totalCreditsRemaining,
     subjectAreas,
+    institutionalRequirements,
     onlineLearningRequirementMet,
     deficiencies,
     scholarshipReadinessFlags,

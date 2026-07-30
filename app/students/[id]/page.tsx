@@ -192,6 +192,30 @@ export default async function StudentProfilePage({ params }: { params: Promise<{
             )}
           </Section>
 
+          {/* FHA ADDITIONAL REQUIREMENTS */}
+          <Section title="FHA Additional Graduation Expectations">
+            <p className="text-xs text-navy/50 mb-3">Tracked separately from the Florida 24-credit audit above.</p>
+            <div className="space-y-3">
+              {audit.institutionalRequirements.map((r) => (
+                <div key={r.key} className="border border-hairline rounded px-4 py-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-navy">{r.label}</span>
+                    {r.creditsRequired !== null ? (
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${r.satisfied ? "bg-advanced-bg text-advanced" : "bg-wholegroup-bg text-wholegroup"}`}>
+                        {r.creditsEarned?.toFixed(1)} / {r.creditsRequired.toFixed(1)} credits
+                      </span>
+                    ) : r.creditsEarned !== null && r.creditsEarned > 0 ? (
+                      <span className="text-xs px-2 py-0.5 rounded font-medium bg-onlevel-bg text-onlevel">
+                        {r.creditsEarned.toFixed(1)} credits on file
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-navy/50 mt-1">{r.note}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
           {/* EDGE RECOMMENDATIONS */}
           <Section title="EDGE Program Recommendations">
             {edgeRecs.length === 0 ? (

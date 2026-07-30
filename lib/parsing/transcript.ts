@@ -12,16 +12,24 @@
  * field it leaves it blank/low-confidence and flags the row for review.
  */
 
-/** Subject-area buckets — must match the graduation_requirements categories. */
+/**
+ * Subject-area buckets. The first eight must match the graduation_requirements
+ * categories exactly (string equality drives credit matching in
+ * lib/audit/graduation.ts). "God First/Bible" and "World Language" are valid
+ * categories too, but are NOT part of the Florida 24-credit count — they're
+ * tracked separately as FHA institutional / college-readiness items.
+ */
 export const SUBJECT_AREAS = [
   "English/Language Arts",
   "Mathematics",
   "Science",
   "Social Studies",
   "Physical Education",
-  "Fine/Performing Arts, Speech, or Practical Arts",
-  "World Language",
+  "Fine Arts/Practical Arts/CTE",
+  "Financial Literacy",
   "Electives",
+  "World Language",
+  "God First/Bible",
 ] as const;
 
 export type SubjectArea = (typeof SUBJECT_AREAS)[number] | "";
@@ -46,7 +54,9 @@ const SUBJECT_KEYWORDS: { area: SubjectArea; keywords: RegExp }[] = [
   { area: "Social Studies", keywords: /\b(history|government|economics|civics|geography|psychology|sociology|social studies)\b/i },
   { area: "World Language", keywords: /\b(spanish|french|latin|german|mandarin|chinese|american sign|world language)\b/i },
   { area: "Physical Education", keywords: /\b(physical education|\bp\.?e\.?\b|health|weight training|fitness)\b/i },
-  { area: "Fine/Performing Arts, Speech, or Practical Arts", keywords: /\b(art|band|chorus|choir|music|drama|theatre|theater|speech|debate|ceramics|dance)\b/i },
+  { area: "Fine Arts/Practical Arts/CTE", keywords: /\b(art|band|chorus|choir|music|drama|theatre|theater|speech|debate|ceramics|dance)\b/i },
+  { area: "Financial Literacy", keywords: /\b(financial literacy|personal finance|money management)\b/i },
+  { area: "God First/Bible", keywords: /\b(bible|scripture|god first|theology)\b/i },
 ];
 
 const ONLINE_HINT = /\b(flvs|online|virtual|e-?learning|distance)\b/i;

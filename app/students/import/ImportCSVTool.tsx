@@ -41,7 +41,7 @@ const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[];
       { name: "student_first_name", hint: "Must match an existing student" },
       { name: "student_last_name", hint: "Must match an existing student" },
       { name: "course_name", hint: "e.g. Algebra 1" },
-      { name: "subject_area", hint: "e.g. Mathematics, English, Science" },
+      { name: "subject_area", hint: "Must exactly match: English/Language Arts, Mathematics, Science, Social Studies, Physical Education, Fine Arts/Practical Arts/CTE, Financial Literacy, Electives, World Language, or God First/Bible" },
       { name: "credit_value", hint: "e.g. 1.0, 0.5" },
       { name: "grade", hint: "Letter grade earned, e.g. A, B+" },
       { name: "school_year", hint: "e.g. 2026-2027" },

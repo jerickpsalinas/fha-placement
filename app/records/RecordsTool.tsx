@@ -19,19 +19,22 @@ const DOC_TYPE_LABELS: Record<DocType, string> = {
   reportcard: "Report Card",
 };
 
+// Florida 24-credit standard diploma breakdown (BEST Standards aligned).
+// Bible, STEAM, World Language, Community Service, and Senior Capstone are
+// FHA institutional expectations tracked separately — see FHA_EXTRAS below —
+// since they are not part of the Florida 24-credit count.
 const REQS = [
-  { key: "ela", label: "English Language Arts", req: 4, cats: ["English Language Arts"] },
+  { key: "ela", label: "English/Language Arts", req: 4, cats: ["English/Language Arts"] },
   { key: "math", label: "Mathematics", req: 4, cats: ["Mathematics"] },
   { key: "sci", label: "Science", req: 3, cats: ["Science"] },
   { key: "ss", label: "Social Studies", req: 3, cats: ["Social Studies"] },
-  { key: "online", label: "Online Course (FL Statute 1003.4282)", req: 1, cats: ["Online Course"] },
+  { key: "pe", label: "Physical Education (HOPE)", req: 1, cats: ["Physical Education"] },
+  { key: "arts", label: "Fine Arts / Practical Arts / CTE", req: 1, cats: ["Fine Arts/Practical Arts/CTE"] },
   { key: "fin", label: "Personal Financial Literacy", req: 0.5, cats: ["Financial Literacy"] },
-  { key: "pe", label: "Physical Education", req: 1, cats: ["Physical Education"] },
-  { key: "arts", label: "Fine Arts / Speech / CTE", req: 1, cats: ["Fine Arts/CTE"] },
-  { key: "bible", label: "God First / Bible (FHA)", req: 1, cats: ["God First/Bible"] },
-  { key: "steam", label: "Agriculture / STEAM Capstone (FHA)", req: 1, cats: ["Agriculture/STEAM"] },
-  { key: "elec", label: "Electives", req: 4.5, cats: ["Elective", "AP/Dual Enrollment", "Other"] },
+  { key: "elec", label: "Electives", req: 7.5, cats: ["Electives", "AP/Dual Enrollment", "Other"] },
 ];
+
+const FHA_BIBLE_CREDITS_REQUIRED = 4;
 
 function levelBadge(level: string) {
   const cls = level === "Intervention" ? "bg-[#FEF3E3] text-[#9B4E00]"
@@ -381,6 +384,24 @@ function TranscriptResult({ data }: { data: Record<string, unknown> }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* FHA Additional Graduation Expectations */}
+      <div className="bg-white border border-[#DDD8CC] rounded-lg p-4">
+        <div className="text-sm font-bold text-[#0D1B2E] mb-1">FHA Additional Graduation Expectations</div>
+        <div className="text-[10px] text-[#777] mb-3">Tracked separately from the Florida 24-credit audit above.</div>
+        <div className="space-y-2 text-[11px] text-[#444]">
+          <div className="flex items-center justify-between border border-[#DDD8CC] rounded px-3 py-2">
+            <span className="font-medium text-[#0D1B2E]">Bible</span>
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${(catEarned["God First/Bible"] || 0) >= FHA_BIBLE_CREDITS_REQUIRED ? "bg-[#E4F5EC] text-[#1A6E40]" : "bg-[#FBF5E6] text-[#7A5800]"}`}>
+              {(catEarned["God First/Bible"] || 0).toFixed(1)} / {FHA_BIBLE_CREDITS_REQUIRED.toFixed(1)} credits
+            </span>
+          </div>
+          <p><strong className="text-[#0D1B2E]">STEAM:</strong> Not a separate graduation credit — embedded monthly, tracked via participation.</p>
+          <p><strong className="text-[#0D1B2E]">Community Service / Service Learning:</strong> If applicable.</p>
+          <p><strong className="text-[#0D1B2E]">Senior Capstone:</strong> If applicable.</p>
+          <p><strong className="text-[#0D1B2E]">World Language:</strong> Optional for graduation — recommended for four-year university plans (2 credits, same language). Tracked as a college-readiness indicator{(catEarned["World Language"] || 0) > 0 ? ` — ${(catEarned["World Language"] || 0).toFixed(1)} credits on file` : ""}.</p>
         </div>
       </div>
 

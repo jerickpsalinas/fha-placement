@@ -125,6 +125,24 @@ export default async function StudentReportPage({ params }: { params: Promise<{ 
         )}
       </ReportSection>
 
+      {/* FHA ADDITIONAL REQUIREMENTS */}
+      <ReportSection title="FHA Additional Graduation Expectations">
+        <p className="text-xs text-gray-400 mb-2">Tracked separately from the Florida 24-credit audit above.</p>
+        <ul className="text-sm text-gray-700 space-y-1">
+          {audit.institutionalRequirements.map((r) => (
+            <li key={r.key}>
+              <span className="font-medium">{r.label}:</span>{" "}
+              {r.creditsRequired !== null
+                ? `${r.creditsEarned?.toFixed(1)} / ${r.creditsRequired.toFixed(1)} credits`
+                : r.creditsEarned !== null && r.creditsEarned > 0
+                ? `${r.creditsEarned.toFixed(1)} credits on file`
+                : null}
+              {" "}{r.note}
+            </li>
+          ))}
+        </ul>
+      </ReportSection>
+
       {/* TESTING */}
       <ReportSection title="Testing History">
         {testScores.length === 0 ? (
