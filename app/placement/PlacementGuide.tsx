@@ -205,46 +205,48 @@ export function PlacementGuide() {
 
   return (
     <div className="min-h-screen bg-[#F7F6F2]">
-      {/* Hero banner */}
-      <div className="bg-[#0D1B2E] px-8 py-10 text-white">
-        <p className="text-[10px] uppercase tracking-[.15em] text-[#C9A84C] font-bold mb-2">Father&apos;s Harbor Academy</p>
-        <h1 className="text-2xl font-bold font-serif">
-          Student Placement &amp; STEAM Planner
-        </h1>
-        <p className="text-[11px] text-white/60 mt-2 max-w-xl">
-          Individualized academic plans driven by MAP Growth RIT scores or FAST achievement levels.
-          Every subject placed independently — a low score in one area never holds a student back in another.
-        </p>
-        <div className="flex flex-wrap gap-2 mt-4">
-          {["God First Daily", "Chapel Wednesdays", "8:00 AM – 2:30 PM", "Individualized by Subject"].map((pill) => (
-            <span key={pill} className="text-[9px] bg-white/10 text-white/80 px-3 py-1 rounded-full">{pill}</span>
+      {/* Hero banner + section tabs (sticky together) */}
+      <div className="sticky top-0 z-10 bg-[#0D1B2E]">
+        <div className="px-8 py-10 text-white">
+          <p className="text-[10px] uppercase tracking-[.15em] text-[#C9A84C] font-bold mb-2">Father&apos;s Harbor Academy</p>
+          <h1 className="text-2xl font-bold font-serif">
+            Student Placement &amp; STEAM Planner
+          </h1>
+          <p className="text-[11px] text-white/60 mt-2 max-w-xl">
+            Individualized academic plans driven by MAP Growth RIT scores or FAST achievement levels.
+            Every subject placed independently — a low score in one area never holds a student back in another.
+          </p>
+          <div className="flex flex-wrap gap-2 mt-4">
+            {["God First Daily", "Chapel Wednesdays", "8:00 AM – 2:30 PM", "Individualized by Subject"].map((pill) => (
+              <span key={pill} className="text-[9px] bg-white/10 text-white/80 px-3 py-1 rounded-full">{pill}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Section tabs */}
+        <div className="px-8 py-2 flex gap-1.5 print:hidden overflow-x-auto border-t border-white/10">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveSection(item.id);
+                document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className={`shrink-0 text-left px-3 py-2 rounded text-[11px] flex items-center gap-2 transition ${
+                activeSection === item.id ? "bg-white/10 text-[#C9A84C]" : "text-white/70 hover:bg-white/5"
+              }`}
+            >
+              <span className="text-[9px] font-bold text-[#C9A84C]">{item.num}</span>
+              {item.label}
+            </button>
           ))}
         </div>
-      </div>
-
-      {/* Section tabs */}
-      <div className="sticky top-0 z-10 bg-[#0D1B2E] px-8 py-2 flex gap-1.5 print:hidden overflow-x-auto">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-              setActiveSection(item.id);
-              document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth" });
-            }}
-            className={`shrink-0 text-left px-3 py-2 rounded text-[11px] flex items-center gap-2 transition ${
-              activeSection === item.id ? "bg-white/10 text-[#C9A84C]" : "text-white/70 hover:bg-white/5"
-            }`}
-          >
-            <span className="text-[9px] font-bold text-[#C9A84C]">{item.num}</span>
-            {item.label}
-          </button>
-        ))}
       </div>
 
       <div>
         <div className="p-8 space-y-10 max-w-5xl">
           {/* SECTION 01: Placement Engine */}
-          <section id="placement">
+          <section id="placement" className="scroll-mt-[220px]">
             <SectionHead num="01" title="Student Placement Engine" sub="Enter a student's scores → get their full class schedule instantly" />
             <div className="bg-white border border-[#DDD8CC] rounded-lg p-6">
               <div className="grid grid-cols-3 gap-3 mb-4">
@@ -409,19 +411,19 @@ export function PlacementGuide() {
           </section>
 
           {/* SECTION 02: Credit Requirements */}
-          <section id="credits">
+          <section id="credits" className="scroll-mt-[220px]">
             <SectionHead num="02" title="Credit Requirements & Promotion Gates" sub="Florida private school standards + FHA-specific requirements" />
             <CreditRequirements />
           </section>
 
           {/* SECTION 03: Course Sequences */}
-          <section id="sequences">
+          <section id="sequences" className="scroll-mt-[220px]">
             <SectionHead num="03" title="Course Sequences K–12" sub="Exact course names by grade and placement level" />
             <CourseSequences />
           </section>
 
           {/* SECTION 04: STEAM Plans */}
-          <section id="steam">
+          <section id="steam" className="scroll-mt-[220px]">
             <SectionHead num="04" title="STEAM Monthly Plans" sub="Thames & Kosmos kits, chapel themes, and garden connections" />
             <div className="flex gap-1.5 mb-4">
               {(["K-2","3-5","6-8","9-12"] as const).map((band) => (
