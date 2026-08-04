@@ -2,3 +2,6 @@
 node_modules
 .next
 output.css
+tsconfig.tsbuildinfo
+.claude/settings.local.json
+SESSION_HANDOFF.md
