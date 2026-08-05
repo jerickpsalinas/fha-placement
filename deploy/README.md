@@ -54,6 +54,16 @@ VPS, and the GitHub repo settings:
 
 ---
 
+## Port configuration
+
+`next.config.js` uses `output: "standalone"`, so `npm start` runs
+`node .next/standalone/server.js` (not `next start` — that combination doesn't
+work). The standalone server reads its port from the `PORT` env var (default
+3000). Set `PORT=3001` in the VPS's `.env.local` — do not pass `-p 3001` to
+PM2/npm, it's ignored by the standalone server.
+
+---
+
 ## Webhook security (HMAC signature verification)
 
 The workflow's **Verify GitHub signature** node recomputes
