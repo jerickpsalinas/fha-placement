@@ -155,6 +155,12 @@ export function ImportCSVTool() {
             </Button>
           </div>
 
+          {kind !== "roster" && (
+            <div className="bg-amber-50 border border-amber-200 rounded p-3 text-xs text-amber-800">
+              <span className="font-semibold">Import order matters:</span> this import matches rows to <span className="font-semibold">existing</span> students by name — it does not create new students. If any of these students aren't in the system yet, import the <span className="font-semibold">New Students (Roster)</span> CSV first, then come back and import this one.
+            </div>
+          )}
+
           <div className="bg-cream border border-hairline rounded p-3">
             <p className="font-semibold mb-2 text-navy text-xs">Expected columns</p>
             <p className="text-xs text-navy/60 mb-3">{TEMPLATES[kind].description} Column names in your CSV's header row must match exactly (order doesn't matter).</p>
