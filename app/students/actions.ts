@@ -5,6 +5,9 @@ import { getCurrentStaff } from "@/lib/auth";
 import { logAudit } from "@/lib/queries";
 import { redirect } from "next/navigation";
 
+const VALID_GRADES = new Set(["K","1","2","3","4","5","6","7","8","9","10","11","12"]);
+const VALID_ENROLLMENT_TYPES = new Set(["private_continuing", "public_transfer"]);
+
 export async function createStudent(formData: FormData) {
   const staff = await getCurrentStaff();
   if (staff.role !== "admin" && staff.role !== "counselor") {
@@ -33,6 +36,12 @@ export async function createStudent(formData: FormData) {
   if (!payload.first_name || !payload.last_name) {
     throw new Error("First and last name are required.");
   }
+  if (!VALID_GRADES.has(payload.grade_level)) {
+    throw new Error(`Invalid grade_level "${payload.grade_level}".`);
+  }
+  if (!VALID_ENROLLMENT_TYPES.has(payload.enrollment_type)) {
+    throw new Error(`Invalid enrollment_type "${payload.enrollment_type}".`);
+  }
 
   const { data, error } = await supabase.from("students").insert(payload).select().single();
 
@@ -43,10 +52,11 @@ export async function createStudent(formData: FormData) {
   // If creator is a counselor, auto-assign themself to the student they just
   // created so they retain visibility under RLS (admins see everyone already).
   if (staff.role === "counselor") {
-    await supabase.from("staff_student_assignments").insert({
+    const { error: assignError } = await supabase.from("staff_student_assignments").insert({
       staff_id: staff.id,
       student_id: data.id,
     });
+    if (assignError) throw new Error(`Student created, but failed to assign to you: ${assignError.message}`);
   }
 
   await logAudit({

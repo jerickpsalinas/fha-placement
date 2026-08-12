@@ -12,10 +12,20 @@ import { generateDraftSchedule } from "@/lib/scheduling/generate";
 import { redirect } from "next/navigation";
 import type { AcademicPathway } from "@/types";
 
+const VALID_PATHWAYS: AcademicPathway[] = [
+  "standard", "advanced_honors", "intervention", "credit_recovery", "iep_support",
+  "504_support", "dual_enrollment", "college_preparatory", "edge_career", "certification",
+];
+const VALID_COURSE_CATEGORIES = new Set(["core", "honors", "intervention", "lunch"]);
+
 export async function createDraftSchedule(studentId: string, schoolYear: string, pathways: AcademicPathway[]) {
   const staff = await getCurrentStaff();
   if (!["admin", "director", "counselor"].includes(staff.role)) {
     throw new Error("Not authorized to build schedules.");
+  }
+  const invalidPathways = pathways.filter((p) => !VALID_PATHWAYS.includes(p));
+  if (invalidPathways.length > 0) {
+    throw new Error(`Invalid pathway(s): ${invalidPathways.join(", ")}`);
   }
   const supabase = await createClient();
 
@@ -130,11 +140,22 @@ export async function addScheduleBlock(scheduleId: string, studentId: string, fo
   const staff = await getCurrentStaff();
   const supabase = await createClient();
 
+  const blockLabel = String(formData.get("block_label") ?? "").trim();
+  const courseName = String(formData.get("course_name") ?? "").trim();
+  const courseCategory = String(formData.get("course_category") ?? "core").trim();
+
+  if (!blockLabel || !courseName) {
+    throw new Error("block_label and course_name are required.");
+  }
+  if (!VALID_COURSE_CATEGORIES.has(courseCategory)) {
+    throw new Error(`Invalid course_category "${courseCategory}". Must be one of: ${[...VALID_COURSE_CATEGORIES].join(", ")}`);
+  }
+
   const { error } = await supabase.from("schedule_blocks").insert({
     schedule_id: scheduleId,
-    block_label: String(formData.get("block_label") ?? ""),
-    course_name: String(formData.get("course_name") ?? ""),
-    course_category: String(formData.get("course_category") ?? "core"),
+    block_label: blockLabel,
+    course_name: courseName,
+    course_category: courseCategory,
     is_online: formData.get("is_online") === "on",
     notes: formData.get("notes") || null,
   });

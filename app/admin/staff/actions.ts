@@ -5,6 +5,8 @@ import { getCurrentStaff } from "@/lib/auth";
 import { createClient as createAdminSupabaseClient } from "@supabase/supabase-js";
 import type { StaffRole } from "@/types";
 
+const VALID_STAFF_ROLES: StaffRole[] = ["admin", "director", "counselor", "teacher", "read_only"];
+
 /**
  * Creates a new staff account: creates the user directly via Supabase Auth
  * admin API with an admin-set password (email pre-confirmed, no invite
@@ -26,6 +28,7 @@ export async function createStaffMember(formData: FormData) {
 
   if (!email || !fullName) throw new Error("Name and email are required.");
   if (!password || password.length < 6) throw new Error("Password must be at least 6 characters.");
+  if (!VALID_STAFF_ROLES.includes(role)) throw new Error(`Invalid role "${role}". Must be one of: ${VALID_STAFF_ROLES.join(", ")}`);
 
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
@@ -71,6 +74,7 @@ export async function deactivateStaffMember(staffId: string) {
 export async function updateStaffRole(staffId: string, role: StaffRole) {
   const staff = await getCurrentStaff();
   if (staff.role !== "admin" && staff.role !== "director") throw new Error("Only an administrator can change staff roles.");
+  if (!VALID_STAFF_ROLES.includes(role)) throw new Error(`Invalid role "${role}". Must be one of: ${VALID_STAFF_ROLES.join(", ")}`);
 
   const supabase = await createServerClient();
   const { error } = await supabase.from("staff_profiles").update({ role }).eq("id", staffId);
