@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 
 type ImportKind = "roster" | "test_scores" | "transcript";
 
-const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[]; description: string }> = {
+const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[]; description: string; example: Record<string, string> }> = {
   roster: {
     description: "Bulk-add new students. One row per student.",
     columns: [
@@ -21,6 +21,11 @@ const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[];
       { name: "gpa", hint: "0.0 – 4.0 (leave blank if unknown)" },
       { name: "credits_earned", hint: "Number of credits earned so far" },
     ],
+    example: {
+      first_name: "Zelda", last_name: "Arriola", grade_level: "9",
+      enrollment_type: "private_continuing", date_of_birth: "2011-05-06",
+      gpa: "3.8", credits_earned: "6",
+    },
   },
   test_scores: {
     description: "MAP, FAST, IXL, ACT, or SAT scores. One row per test result.",
@@ -34,6 +39,11 @@ const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[];
       { name: "test_date", hint: "YYYY-MM-DD" },
       { name: "school_year", hint: "e.g. 2026-2027" },
     ],
+    example: {
+      student_first_name: "Zelda", student_last_name: "Arriola", test_type: "MAP",
+      subject: "Math", score: "197", percentile: "23", test_date: "2026-05-06",
+      school_year: "2026-2027",
+    },
   },
   transcript: {
     description: "Transcript / course history entries. One row per course.",
@@ -48,8 +58,26 @@ const TEMPLATES: Record<ImportKind, { columns: { name: string; hint: string }[];
       { name: "is_online", hint: "true or false" },
       { name: "is_dual_enrollment", hint: "true or false" },
     ],
+    example: {
+      student_first_name: "Zelda", student_last_name: "Arriola", course_name: "Algebra 1",
+      subject_area: "Mathematics", credit_value: "1.0", grade: "B+",
+      school_year: "2026-2027", is_online: "false", is_dual_enrollment: "false",
+    },
   },
 };
+
+function downloadTemplate(kind: ImportKind) {
+  const { columns, example } = TEMPLATES[kind];
+  const headers = columns.map((c) => c.name);
+  const csv = Papa.unparse({ fields: headers, data: [headers.map((h) => example[h] ?? "")] });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${kind}_template.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function ImportCSVTool() {
   const [kind, setKind] = useState<ImportKind>("roster");
@@ -123,7 +151,16 @@ export function ImportCSVTool() {
           </div>
 
           <div className="bg-cream border border-hairline rounded p-3">
-            <p className="font-semibold mb-2 text-navy text-xs">Expected columns</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-semibold text-navy text-xs">Expected columns</p>
+              <button
+                type="button"
+                onClick={() => downloadTemplate(kind)}
+                className="text-xs text-gold font-semibold underline"
+              >
+                Download template CSV
+              </button>
+            </div>
             <p className="text-xs text-navy/60 mb-3">{TEMPLATES[kind].description} Column names in your CSV's header row must match exactly (order doesn't matter).</p>
             <div className="space-y-1">
               {TEMPLATES[kind].columns.map((c) => (
