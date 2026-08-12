@@ -27,9 +27,15 @@ export async function createStaffMember(formData: FormData) {
   if (!email || !fullName) throw new Error("Name and email are required.");
   if (!password || password.length < 6) throw new Error("Password must be at least 6 characters.");
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      "Server is missing SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_URL). Set it in the server's .env.local and restart the app."
+    );
+  }
+
   const adminClient = createAdminSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
