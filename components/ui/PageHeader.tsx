@@ -12,7 +12,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="bg-navy px-8 py-10 text-white">
+    <div className="sticky top-0 z-10 bg-navy px-8 py-10 text-white">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[.15em] text-gold font-bold mb-2">{eyebrow}</p>
