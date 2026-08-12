@@ -137,30 +137,26 @@ export function ImportCSVTool() {
       <PageHeader title="Import CSV" subtitle="Bulk-add students, test scores, or transcript history from a spreadsheet." />
       <main className="p-8 max-w-4xl">
         <Card className="p-6 space-y-5">
-          <div>
-            <label className="block text-[10px] font-semibold text-navy mb-1">What are you importing?</label>
-            <select
-              value={kind}
-              onChange={(e) => { setKind(e.target.value as ImportKind); setRows([]); setStatus(null); }}
-              className="border border-hairline rounded px-3 py-2 text-sm w-full max-w-sm"
-            >
-              <option value="roster">New Students (Roster)</option>
-              <option value="test_scores">Test Scores (MAP / FAST / IXL / ACT / SAT)</option>
-              <option value="transcript">Transcript / Course History</option>
-            </select>
+          <div className="flex items-end gap-3">
+            <div className="flex-1 max-w-sm">
+              <label className="block text-[10px] font-semibold text-navy mb-1">What are you importing?</label>
+              <select
+                value={kind}
+                onChange={(e) => { setKind(e.target.value as ImportKind); setRows([]); setStatus(null); }}
+                className="border border-hairline rounded px-3 py-2 text-sm w-full"
+              >
+                <option value="roster">New Students (Roster)</option>
+                <option value="test_scores">Test Scores (MAP / FAST / IXL / ACT / SAT)</option>
+                <option value="transcript">Transcript / Course History</option>
+              </select>
+            </div>
+            <Button type="button" onClick={() => downloadTemplate(kind)} className="shrink-0">
+              Download template CSV
+            </Button>
           </div>
 
           <div className="bg-cream border border-hairline rounded p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-semibold text-navy text-xs">Expected columns</p>
-              <button
-                type="button"
-                onClick={() => downloadTemplate(kind)}
-                className="text-xs text-gold font-semibold underline"
-              >
-                Download template CSV
-              </button>
-            </div>
+            <p className="font-semibold mb-2 text-navy text-xs">Expected columns</p>
             <p className="text-xs text-navy/60 mb-3">{TEMPLATES[kind].description} Column names in your CSV's header row must match exactly (order doesn't matter).</p>
             <div className="space-y-1">
               {TEMPLATES[kind].columns.map((c) => (
