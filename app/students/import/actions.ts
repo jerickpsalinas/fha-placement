@@ -15,19 +15,32 @@ const VALID_TEST_TYPES = new Set(["MAP", "FAST", "IXL", "ACT", "SAT"]);
 const VALID_GRADES = new Set(["K","1","2","3","4","5","6","7","8","9","10","11","12"]);
 const VALID_SUBJECT_AREAS = new Set<string>(SUBJECT_AREAS);
 
+type StudentLookup =
+  | { status: "found"; id: string }
+  | { status: "not_found" }
+  | { status: "ambiguous"; count: number };
+
 async function findStudentId(
   supabase: Awaited<ReturnType<typeof createClient>>,
   firstName: string,
   lastName: string
-): Promise<string | null> {
+): Promise<StudentLookup> {
   const { data } = await supabase
     .from("students")
     .select("id")
     .ilike("first_name", firstName.trim())
-    .ilike("last_name", lastName.trim())
-    .limit(1)
-    .maybeSingle();
-  return data?.id ?? null;
+    .ilike("last_name", lastName.trim());
+
+  if (!data || data.length === 0) return { status: "not_found" };
+  if (data.length > 1) return { status: "ambiguous", count: data.length };
+  return { status: "found", id: data[0].id };
+}
+
+function studentLookupError(lookup: StudentLookup, firstName: string, lastName: string): string {
+  if (lookup.status === "ambiguous") {
+    return `matches ${lookup.count} students named "${firstName} ${lastName}" — can't tell which one this row is for. Add a middle name or use a unique identifier to disambiguate.`;
+  }
+  return `no matching student found for "${firstName} ${lastName}"`;
 }
 
 export async function importRosterCsv(rows: Record<string, string>[]): Promise<ImportResult> {
@@ -100,11 +113,12 @@ export async function importTestScoresCsv(rows: Record<string, string>[]): Promi
       errors.push(`Row ${i + 1}: missing student_first_name or student_last_name. Parsed row: ${JSON.stringify(row)}`);
       continue;
     }
-    const studentId = await findStudentId(supabase, row.student_first_name, row.student_last_name);
-    if (!studentId) {
-      errors.push(`Row ${i + 1}: no matching student found for "${row.student_first_name} ${row.student_last_name}"`);
+    const lookup = await findStudentId(supabase, row.student_first_name, row.student_last_name);
+    if (lookup.status !== "found") {
+      errors.push(`Row ${i + 1}: ${studentLookupError(lookup, row.student_first_name, row.student_last_name)}`);
       continue;
     }
+    const studentId = lookup.id;
     if (!row.test_date || !row.school_year) {
       errors.push(`Row ${i + 1}: missing test_date or school_year`);
       continue;
@@ -147,11 +161,12 @@ export async function importTranscriptCsv(rows: Record<string, string>[]): Promi
       errors.push(`Row ${i + 1}: missing student_first_name or student_last_name. Parsed row: ${JSON.stringify(row)}`);
       continue;
     }
-    const studentId = await findStudentId(supabase, row.student_first_name, row.student_last_name);
-    if (!studentId) {
-      errors.push(`Row ${i + 1}: no matching student found for "${row.student_first_name} ${row.student_last_name}"`);
+    const lookup = await findStudentId(supabase, row.student_first_name, row.student_last_name);
+    if (lookup.status !== "found") {
+      errors.push(`Row ${i + 1}: ${studentLookupError(lookup, row.student_first_name, row.student_last_name)}`);
       continue;
     }
+    const studentId = lookup.id;
     if (!row.course_name || !row.subject_area || !row.school_year) {
       errors.push(`Row ${i + 1}: missing course_name, subject_area, or school_year`);
       continue;
