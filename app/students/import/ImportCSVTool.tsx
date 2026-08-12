@@ -65,8 +65,21 @@ export function ImportCSVTool() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (h) => h.replace(/^﻿/, "").trim(),
       complete: (result) => {
-        setRows(result.data as Record<string, string>[]);
+        const parsedRows = result.data as Record<string, string>[];
+        const expected = TEMPLATES[kind].columns.map((c) => c.name);
+        const found = parsedRows.length > 0 ? Object.keys(parsedRows[0]) : [];
+        const missing = expected.filter((col) => !found.includes(col));
+        if (missing.length > 0) {
+          setStatus(
+            `CSV headers don't match the selected import type ("${kind}"). Missing column(s): ${missing.join(", ")}. Detected headers: ${found.join(", ") || "(none)"}. Did you mean to select a different import type above?`
+          );
+          setRows([]);
+          setFileName("");
+          return;
+        }
+        setRows(parsedRows);
         setStatus(null);
       },
     });

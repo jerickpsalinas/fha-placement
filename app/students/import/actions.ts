@@ -94,7 +94,11 @@ export async function importTestScoresCsv(rows: Record<string, string>[]): Promi
       errors.push(`Row ${i + 1}: invalid test_type "${row.test_type}"`);
       continue;
     }
-    const studentId = await findStudentId(supabase, row.student_first_name ?? "", row.student_last_name ?? "");
+    if (!row.student_first_name || !row.student_last_name) {
+      errors.push(`Row ${i + 1}: missing student_first_name or student_last_name. Parsed row: ${JSON.stringify(row)}`);
+      continue;
+    }
+    const studentId = await findStudentId(supabase, row.student_first_name, row.student_last_name);
     if (!studentId) {
       errors.push(`Row ${i + 1}: no matching student found for "${row.student_first_name} ${row.student_last_name}"`);
       continue;
