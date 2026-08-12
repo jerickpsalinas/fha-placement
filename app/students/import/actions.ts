@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff } from "@/lib/auth";
 import { logAudit } from "@/lib/queries";
+import { SUBJECT_AREAS } from "@/lib/parsing/transcript";
 
 interface ImportResult {
   success: number;
@@ -12,6 +13,7 @@ interface ImportResult {
 
 const VALID_TEST_TYPES = new Set(["MAP", "FAST", "IXL", "ACT", "SAT"]);
 const VALID_GRADES = new Set(["K","1","2","3","4","5","6","7","8","9","10","11","12"]);
+const VALID_SUBJECT_AREAS = new Set<string>(SUBJECT_AREAS);
 
 async function findStudentId(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -141,13 +143,21 @@ export async function importTranscriptCsv(rows: Record<string, string>[]): Promi
   const errors: string[] = [];
 
   for (const [i, row] of rows.entries()) {
-    const studentId = await findStudentId(supabase, row.student_first_name ?? "", row.student_last_name ?? "");
+    if (!row.student_first_name || !row.student_last_name) {
+      errors.push(`Row ${i + 1}: missing student_first_name or student_last_name. Parsed row: ${JSON.stringify(row)}`);
+      continue;
+    }
+    const studentId = await findStudentId(supabase, row.student_first_name, row.student_last_name);
     if (!studentId) {
       errors.push(`Row ${i + 1}: no matching student found for "${row.student_first_name} ${row.student_last_name}"`);
       continue;
     }
     if (!row.course_name || !row.subject_area || !row.school_year) {
       errors.push(`Row ${i + 1}: missing course_name, subject_area, or school_year`);
+      continue;
+    }
+    if (!VALID_SUBJECT_AREAS.has(row.subject_area)) {
+      errors.push(`Row ${i + 1}: invalid subject_area "${row.subject_area}". Must exactly match one of: ${SUBJECT_AREAS.join(", ")}`);
       continue;
     }
 
