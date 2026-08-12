@@ -138,6 +138,9 @@ export async function generateAndCreateSchedule(studentId: string, schoolYear: s
 
 export async function addScheduleBlock(scheduleId: string, studentId: string, formData: FormData) {
   const staff = await getCurrentStaff();
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
+    throw new Error("Not authorized to edit schedules.");
+  }
   const supabase = await createClient();
 
   const blockLabel = String(formData.get("block_label") ?? "").trim();
@@ -167,6 +170,9 @@ export async function addScheduleBlock(scheduleId: string, studentId: string, fo
 
 export async function submitForApproval(scheduleId: string, studentId: string) {
   const staff = await getCurrentStaff();
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
+    throw new Error("Not authorized to submit schedules for approval.");
+  }
   const supabase = await createClient();
 
   const { error } = await supabase

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 const PROMPTS: Record<string, string> = {
   transcript: 'You are reading a high school transcript. Extract all course data and return ONLY valid JSON — no markdown, no code fences. Schema: {"studentName":"","currentGrade":"","cumulativeGpa":null,"totalCreditsEarned":0,"hasOnlineCourse":false,"courses":[{"name":"","credits":0,"grade":"","category":"","year":""}]}. Categories must be one of: English/Language Arts, Mathematics, Science, Social Studies, Physical Education, Fine Arts/Practical Arts/CTE, Financial Literacy, Electives, World Language, God First/Bible, AP/Dual Enrollment, Other.',
@@ -10,6 +11,12 @@ const PROMPTS: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY not configured on server" }, { status: 500 });
