@@ -58,7 +58,7 @@ export async function createStaffMember(formData: FormData) {
   }
 }
 
-export function getAdminClient() {
+function getAdminClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
       "Server is missing SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_URL). Set it in the server's .env.local and restart the app."
