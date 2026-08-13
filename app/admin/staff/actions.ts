@@ -58,7 +58,7 @@ export async function createStaffMember(formData: FormData) {
   }
 }
 
-function getAdminClient() {
+export function getAdminClient() {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
       "Server is missing SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_URL). Set it in the server's .env.local and restart the app."
@@ -68,6 +68,20 @@ function getAdminClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+}
+
+/** Maps staff_profiles id -> login email (emails live in Supabase Auth, not staff_profiles). */
+export async function getStaffEmails(staffIds: string[]): Promise<Record<string, string>> {
+  const adminClient = getAdminClient();
+  const { data, error } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+  if (error) throw new Error(error.message);
+
+  const idSet = new Set(staffIds);
+  const emails: Record<string, string> = {};
+  for (const u of data.users) {
+    if (idSet.has(u.id)) emails[u.id] = u.email ?? "(no email)";
+  }
+  return emails;
 }
 
 export async function deactivateStaffMember(staffId: string) {

@@ -4,13 +4,14 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/server";
-import { createStaffMember, deactivateStaffMember } from "@/app/admin/staff/actions";
+import { createStaffMember, deactivateStaffMember, getStaffEmails } from "@/app/admin/staff/actions";
 import type { StaffProfile } from "@/types";
 
 export default async function ManageStaffPage() {
   const staff = await requireRole(["admin", "director"]);
   const supabase = await createClient();
   const { data: allStaff } = await supabase.from("staff_profiles").select("*").order("full_name");
+  const emails = await getStaffEmails((allStaff ?? []).map((s) => s.id));
 
   async function createAction(formData: FormData) {
     "use server";
@@ -49,6 +50,7 @@ export default async function ManageStaffPage() {
               <thead className="text-[10px] uppercase tracking-wide text-navy/40">
                 <tr>
                   <th className="text-left px-2 py-1.5">Name</th>
+                  <th className="text-left px-2 py-1.5">Email</th>
                   <th className="text-left px-2 py-1.5">Role</th>
                   <th className="text-left px-2 py-1.5">Status</th>
                   <th className="text-left px-2 py-1.5"></th>
@@ -58,6 +60,7 @@ export default async function ManageStaffPage() {
                 {(allStaff as StaffProfile[] | null)?.map((s) => (
                   <tr key={s.id} className="border-t border-hairline/60">
                     <td className="px-2 py-1.5 text-navy">{s.full_name}</td>
+                    <td className="px-2 py-1.5 text-navy/70">{emails[s.id] ?? "—"}</td>
                     <td className="px-2 py-1.5 capitalize text-navy">{s.role.replace("_", " ")}</td>
                     <td className="px-2 py-1.5 text-navy">{s.active ? "Active" : "Deactivated"}</td>
                     <td className="px-2 py-1.5">
