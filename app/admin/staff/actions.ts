@@ -30,16 +30,7 @@ export async function createStaffMember(formData: FormData) {
   if (!password || password.length < 6) throw new Error("Password must be at least 6 characters.");
   if (!VALID_STAFF_ROLES.includes(role)) throw new Error(`Invalid role "${role}". Must be one of: ${VALID_STAFF_ROLES.join(", ")}`);
 
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error(
-      "Server is missing SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_URL). Set it in the server's .env.local and restart the app."
-    );
-  }
-
-  const adminClient = createAdminSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
+  const adminClient = getAdminClient();
 
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email,
@@ -58,7 +49,70 @@ export async function createStaffMember(formData: FormData) {
     active: true,
   });
 
-  if (profileError) throw new Error(profileError.message);
+  if (profileError) {
+    // Roll back the login so we never leave an orphaned auth user with no
+    // staff_profiles row — that account would be able to sign in but
+    // invisible on the Manage Staff page (which only reads staff_profiles).
+    await adminClient.auth.admin.deleteUser(created.user.id);
+    throw new Error(`Failed to create staff profile, login was rolled back: ${profileError.message}`);
+  }
+}
+
+function getAdminClient() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error(
+      "Server is missing SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_URL). Set it in the server's .env.local and restart the app."
+    );
+  }
+  return createAdminSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
+/**
+ * Finds logins that exist in Supabase Auth but have no matching
+ * staff_profiles row — these accounts can sign in but are invisible on the
+ * Manage Staff page, which only reads staff_profiles. Can happen if a past
+ * profile insert failed after the login was already created.
+ */
+export async function getOrphanedAuthUsers() {
+  const staff = await getCurrentStaff();
+  if (staff.role !== "admin" && staff.role !== "director") {
+    throw new Error("Only an administrator can view orphaned logins.");
+  }
+
+  const adminClient = getAdminClient();
+  const supabase = await createServerClient();
+
+  const { data: authUsers, error: listError } = await adminClient.auth.admin.listUsers({ perPage: 1000 });
+  if (listError) throw new Error(listError.message);
+
+  const { data: profiles, error: profilesError } = await supabase.from("staff_profiles").select("id");
+  if (profilesError) throw new Error(profilesError.message);
+
+  const knownIds = new Set((profiles ?? []).map((p) => p.id));
+  return authUsers.users
+    .filter((u) => !knownIds.has(u.id))
+    .map((u) => ({ id: u.id, email: u.email ?? "(no email)", created_at: u.created_at }));
+}
+
+export async function recoverOrphanedUser(userId: string, fullName: string, role: StaffRole) {
+  const staff = await getCurrentStaff();
+  if (staff.role !== "admin" && staff.role !== "director") {
+    throw new Error("Only an administrator can recover a login.");
+  }
+  if (!fullName.trim()) throw new Error("Full name is required.");
+  if (!VALID_STAFF_ROLES.includes(role)) throw new Error(`Invalid role "${role}". Must be one of: ${VALID_STAFF_ROLES.join(", ")}`);
+
+  const supabase = await createServerClient();
+  const { error } = await supabase.from("staff_profiles").insert({
+    id: userId,
+    full_name: fullName.trim(),
+    role,
+    active: true,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function deactivateStaffMember(staffId: string) {
