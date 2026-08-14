@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { StaffProfile } from "@/types";
 
-const NAV_HREFS = ["/dashboard", "/students", "/students/new", "/students/import", "/placement", "/records", "/admin/approvals", "/admin/staff"];
+const NAV_HREFS = ["/dashboard", "/students", "/students/new", "/students/import", "/placement", "/records", "/admin/approvals", "/admin/staff", "/settings"];
 
 function isActive(pathname: string, href: string) {
   if (pathname === href) return true;
@@ -50,6 +50,7 @@ export function Sidebar({ staff }: { staff: StaffProfile }) {
         <NavLink href="/records">Records &amp; Transcripts</NavLink>
         {staff.role === "admin" && <NavLink href="/admin/approvals">Approval Queue</NavLink>}
         {staff.role === "admin" && <NavLink href="/admin/staff">Manage Staff</NavLink>}
+        <NavLink href="/settings">Settings</NavLink>
       </nav>
       <div className="text-xs text-white/60 pt-4 border-t border-white/10">
         <p className="font-medium text-white">{staff.full_name}</p>
