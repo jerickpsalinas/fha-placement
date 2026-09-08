@@ -58,18 +58,44 @@ export function ImportCSVTool() {
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function parseFile(file: File) {
+    if (!file.name.toLowerCase().endsWith(".csv") && file.type !== "text/csv") {
+      setStatus("Please choose a .csv file.");
+      return;
+    }
     setFileName(file.name);
+    setStatus(null);
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (result) => {
-        setRows(result.data as Record<string, string>[]);
-        setStatus(null);
+        const data = result.data as Record<string, string>[];
+        setRows(data);
+        if (data.length === 0) {
+          setStatus("No data rows found. Check that the file has a header row and at least one row of data.");
+        } else if (result.errors.length > 0) {
+          setStatus(`Parsed ${data.length} row(s), but the file had ${result.errors.length} parse warning(s). First: ${result.errors[0].message}`);
+        }
+      },
+      error: (err) => {
+        setRows([]);
+        setStatus(`Could not read the file: ${err.message}`);
       },
     });
+  }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    parseFile(file);
+    // Reset so re-selecting the same file fires onChange again.
+    e.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) parseFile(file);
   }
 
   async function handleSubmit() {
@@ -124,7 +150,11 @@ export function ImportCSVTool() {
 
           <div>
             <label className="block text-[10px] font-semibold text-navy mb-1">CSV File</label>
-            <div className="border-2 border-dashed border-hairline rounded-lg p-6 text-center">
+            <div
+              className="border-2 border-dashed border-hairline rounded-lg p-6 text-center"
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+            >
               <input type="file" accept=".csv" onChange={handleFile} className="hidden" id="csv-file-input" />
               <label htmlFor="csv-file-input" className="cursor-pointer">
                 <div className="text-sm text-navy/60">

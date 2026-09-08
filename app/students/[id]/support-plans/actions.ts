@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff } from "@/lib/auth";
+import { logAudit } from "@/lib/queries";
 import { revalidatePath } from "next/cache";
 
 const BUCKET = "iep-504-documents";
@@ -12,7 +13,7 @@ export async function uploadSupportPlanDocument(
   formData: FormData
 ): Promise<{ error?: string }> {
   const staff = await getCurrentStaff();
-  if (!["admin", "counselor"].includes(staff.role)) {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     return { error: "Only admins and counselors may upload documents." };
   }
 
@@ -61,7 +62,7 @@ export async function createSupportPlan(
   formData: FormData
 ): Promise<{ id?: string; error?: string }> {
   const staff = await getCurrentStaff();
-  if (!["admin", "counselor"].includes(staff.role)) {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     return { error: "Only admins and counselors may create support plans." };
   }
 
@@ -91,6 +92,20 @@ export async function createSupportPlan(
     return { error: error?.message ?? "Failed to create support plan." };
   }
 
+  // Keep the denormalized student flag (read by the roster list) in sync with
+  // the plan that was just created, so has_iep/has_504 don't drift.
+  const flagColumn = planType === "IEP" ? "has_iep" : "has_504";
+  await supabase.from("students").update({ [flagColumn]: true }).eq("id", studentId);
+
+  await logAudit({
+    staffId: staff.id,
+    studentId,
+    action: "create",
+    tableName: "support_plans",
+    recordId: data.id,
+    details: { plan_type: planType },
+  });
+
   revalidatePath(`/students/${studentId}`);
   return { id: data.id };
 }
@@ -100,7 +115,7 @@ export async function getDocumentSignedUrl(
   storagePath: string
 ): Promise<{ url?: string; error?: string }> {
   const staff = await getCurrentStaff();
-  if (!["admin", "counselor"].includes(staff.role)) {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     return { error: "Not authorized." };
   }
 

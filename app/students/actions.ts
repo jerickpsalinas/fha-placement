@@ -5,20 +5,32 @@ import { getCurrentStaff } from "@/lib/auth";
 import { logAudit } from "@/lib/queries";
 import { redirect } from "next/navigation";
 
+const VALID_GRADES = new Set(["K","1","2","3","4","5","6","7","8","9","10","11","12"]);
+const VALID_ENROLLMENT_TYPES = new Set(["private_continuing", "public_transfer"]);
+
 export async function createStudent(formData: FormData) {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin" && staff.role !== "counselor") {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     throw new Error("Not authorized to add students.");
   }
 
   const supabase = await createClient();
 
+  const gradeLevel = String(formData.get("grade_level"));
+  const enrollmentType = String(formData.get("enrollment_type"));
+  if (!VALID_GRADES.has(gradeLevel)) {
+    throw new Error(`Invalid grade level "${gradeLevel}".`);
+  }
+  if (!VALID_ENROLLMENT_TYPES.has(enrollmentType)) {
+    throw new Error(`Invalid enrollment type "${enrollmentType}".`);
+  }
+
   const payload = {
     first_name: String(formData.get("first_name") ?? "").trim(),
     last_name: String(formData.get("last_name") ?? "").trim(),
     date_of_birth: formData.get("date_of_birth") || null,
-    grade_level: String(formData.get("grade_level")),
-    enrollment_type: String(formData.get("enrollment_type")),
+    grade_level: gradeLevel,
+    enrollment_type: enrollmentType,
     prior_school: formData.get("prior_school") || null,
     gpa: formData.get("gpa") ? Number(formData.get("gpa")) : null,
     credits_earned: formData.get("credits_earned") ? Number(formData.get("credits_earned")) : 0,
@@ -43,10 +55,15 @@ export async function createStudent(formData: FormData) {
   // If creator is a counselor, auto-assign themself to the student they just
   // created so they retain visibility under RLS (admins see everyone already).
   if (staff.role === "counselor") {
-    await supabase.from("staff_student_assignments").insert({
+    const { error: assignError } = await supabase.from("staff_student_assignments").insert({
       staff_id: staff.id,
       student_id: data.id,
     });
+    if (assignError) {
+      throw new Error(
+        `Student created but auto-assignment failed (${assignError.message}). Ask an admin to assign you to this student so it stays visible.`
+      );
+    }
   }
 
   await logAudit({

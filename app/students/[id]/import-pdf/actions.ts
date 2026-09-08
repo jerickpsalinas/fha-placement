@@ -4,6 +4,7 @@ import pdf from "pdf-parse/lib/pdf-parse.js";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentStaff } from "@/lib/auth";
 import { logAudit } from "@/lib/queries";
+import { revalidatePath } from "next/cache";
 import { parseTranscriptText, SUBJECT_AREAS, type ParsedTranscriptRow } from "@/lib/parsing/transcript";
 
 export interface ExtractResult {
@@ -19,7 +20,7 @@ export interface ExtractResult {
  */
 export async function extractTranscriptPdf(formData: FormData): Promise<ExtractResult> {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin" && staff.role !== "counselor") {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     throw new Error("Not authorized to import transcript data.");
   }
 
@@ -70,7 +71,7 @@ export async function saveReviewedTranscriptRows(
   rows: ParsedTranscriptRow[]
 ): Promise<SaveResult> {
   const staff = await getCurrentStaff();
-  if (staff.role !== "admin" && staff.role !== "counselor") {
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
     throw new Error("Not authorized to import transcript data.");
   }
   const supabase = await createClient();
@@ -104,5 +105,6 @@ export async function saveReviewedTranscriptRows(
     details: { source: "pdf_import", count: cleaned.length },
   });
 
+  revalidatePath(`/students/${studentId}`);
   return { saved: cleaned.length };
 }

@@ -61,8 +61,18 @@ export function runGraduationAudit(
     creditsBySubject.set(entry.subject_area, current + Number(entry.credit_value));
   }
 
+  // Bible and World Language are tracked separately (institutionalRequirements
+  // below) and must not inflate the Florida 24-credit total, nor push
+  // totalCreditsRequired above the documented 24 if such rows are ever
+  // configured in graduation_requirements.
+  const NON_FLORIDA_SUBJECT_AREAS = new Set(["God First/Bible", "World Language"]);
+
   const subjectAreas: SubjectAreaAudit[] = requirements
-    .filter((r) => r.subject_area !== "Online Learning Requirement")
+    .filter(
+      (r) =>
+        r.subject_area !== "Online Learning Requirement" &&
+        !NON_FLORIDA_SUBJECT_AREAS.has(r.subject_area)
+    )
     .map((req) => {
       const earned = creditsBySubject.get(req.subject_area) ?? 0;
       const remaining = Math.max(0, req.credits_required - earned);
@@ -76,27 +86,30 @@ export function runGraduationAudit(
       };
     });
 
-  // Bible and World Language are tracked separately (institutionalRequirements
-  // below) and must not inflate the Florida 24-credit total as "extra" credits.
-  const NON_FLORIDA_SUBJECT_AREAS = new Set(["God First/Bible", "World Language"]);
-
   const totalCreditsRequired = subjectAreas.reduce((sum, s) => sum + s.creditsRequired, 0);
-  const totalCreditsEarned = subjectAreas.reduce((sum, s) => sum + Math.min(s.creditsEarned, s.creditsRequired), 0)
-    + transcript
-        .filter((e) => !requirements.some((r) => r.subject_area === e.subject_area) && !NON_FLORIDA_SUBJECT_AREAS.has(e.subject_area))
-        .reduce((sum, e) => sum + Number(e.credit_value), 0); // uncategorized/extra credits still count toward total
-  const totalCreditsRemaining = Math.max(0, totalCreditsRequired - totalCreditsEarned);
+  // Every real Florida-counting credit the student has earned goes toward the
+  // total, including credits earned beyond a required area's cap (which count as
+  // electives under FL rules) and uncategorized credits. Only Bible/World
+  // Language are excluded (tracked as institutional requirements below). This
+  // deliberately does NOT truncate per-area with Math.min — doing so would drop
+  // surplus core credits and report a fully-credited student as deficient.
+  const totalCreditsEarned = transcript
+    .filter((e) => !NON_FLORIDA_SUBJECT_AREAS.has(e.subject_area))
+    .reduce((sum, e) => sum + Number(e.credit_value), 0);
+  // Remaining is the sum of per-subject shortfalls, NOT (required - earned):
+  // surplus credits in one area count toward the total earned but must not mask
+  // a shortfall in another (a student with extra English but no Math still needs
+  // the Math credits to graduate). This keeps "remaining" consistent with the
+  // per-subject deficiency list.
+  const totalCreditsRemaining = subjectAreas.reduce((sum, s) => sum + s.creditsRemaining, 0);
 
   const deficiencies = subjectAreas
     .filter((s) => !s.satisfied)
     .map((s) => `${s.subjectArea}: needs ${s.creditsRemaining.toFixed(2)} more credit(s)`);
 
   // FL online-learning requirement is a one-time graduation gate: once met in
-  // ANY year it stays met. Check the audited year first for a fast path, then
-  // fall back to any prior year. .some() on an empty array correctly returns false.
-  const onlineLearningRequirementMet = onlineLearningRecords.some(
-    (r) => r.school_year === schoolYear && r.requirement_met
-  ) || onlineLearningRecords.some((r) => r.requirement_met);
+  // ANY year it stays met. .some() on an empty array correctly returns false.
+  const onlineLearningRequirementMet = onlineLearningRecords.some((r) => r.requirement_met);
 
   if (!onlineLearningRequirementMet) {
     deficiencies.push("Online Learning Requirement: not yet completed");

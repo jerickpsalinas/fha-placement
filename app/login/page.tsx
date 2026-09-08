@@ -23,12 +23,22 @@ function LoginForm() {
 
   useEffect(() => {
     const urlError = searchParams.get("error");
-    if (urlError && urlError !== "auth") {
-      setError(urlError);
-    } else if (urlError === "auth") {
-      setError("Authentication failed. Please try again or request a new link.");
+    if (!urlError) return;
+
+    const MESSAGES: Record<string, string> = {
+      auth: "Authentication failed. Please try again or request a new link.",
+      account_deactivated:
+        "Your account has been deactivated. Contact your administrator for access.",
+      not_authorized: "You don't have permission to view that page.",
+    };
+    setError(MESSAGES[urlError] ?? "Something went wrong. Please sign in again.");
+
+    // A deactivated/profile-less user still holds a valid session, which would
+    // otherwise keep bouncing them back here. Clear it so the next sign-in is clean.
+    if (urlError === "account_deactivated") {
+      supabase.auth.signOut();
     }
-  }, [searchParams]);
+  }, [searchParams, supabase]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();

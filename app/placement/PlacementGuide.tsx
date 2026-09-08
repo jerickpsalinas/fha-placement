@@ -36,6 +36,7 @@ function levelClass(level: PlacementLevel) {
     case "on_level": return "border-l-[#0F4C8A] bg-[#E8F0FB]";
     case "advanced": return "border-l-[#2E6B7A] bg-[#EAF3F6]";
     case "whole_group": return "border-l-[#C9A84C] bg-[#FBF5E6]";
+    default: return "border-l-[#0F4C8A] bg-[#E8F0FB]";
   }
 }
 
@@ -45,6 +46,7 @@ function levelTextColor(level: PlacementLevel) {
     case "on_level": return "text-[#0F4C8A]";
     case "advanced": return "text-[#2E6B7A]";
     case "whole_group": return "text-[#7A5800]";
+    default: return "text-[#0F4C8A]";
   }
 }
 
@@ -88,8 +90,10 @@ export function PlacementGuide() {
     testLabel: string;
     cards: SubjectCard[];
   } | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   function buildPlacement() {
+    setFormError(null);
     const norms = MAP_NORMS[grade];
     const gNum = grade === "K" ? 0 : parseInt(grade, 10);
     const cards: SubjectCard[] = [];
@@ -104,7 +108,7 @@ export function PlacementGuide() {
     if (testType === "MAP") {
       const mRit = parseInt(mathRit, 10);
       const rRit = parseInt(readRit, 10);
-      if (isNaN(mRit) || isNaN(rRit)) { alert("Enter both Math and Reading RIT scores."); return; }
+      if (isNaN(mRit) || isNaN(rRit)) { setFormError("Enter both Math and Reading RIT scores."); return; }
       mathLevel = mapRitToLevel(mRit, norms.math25, norms.math75);
       readLevel = mapRitToLevel(rRit, norms.read25, norms.read75);
       mathWhy = `RIT ${mRit} vs. grade avg ${norms.mathAvg} (25th: ${norms.math25}, 75th: ${norms.math75})`;
@@ -116,11 +120,15 @@ export function PlacementGuide() {
       testLabel = `MAP Growth · ${testWindow.charAt(0).toUpperCase() + testWindow.slice(1)}`;
     } else {
       if (gNum < FAST_MIN_GRADE || gNum > FAST_MAX_GRADE) {
-        alert(`FAST is only valid for grades ${FAST_MIN_GRADE}–${FAST_MAX_GRADE}.`);
+        setFormError(`FAST is only valid for grades ${FAST_MIN_GRADE}–${FAST_MAX_GRADE}.`);
         return;
       }
       const mLvl = parseInt(fastMath, 10);
       const rLvl = parseInt(fastEla, 10);
+      if (isNaN(mLvl) || isNaN(rLvl) || mLvl < 1 || mLvl > 5 || rLvl < 1 || rLvl > 5) {
+        setFormError("Select a FAST achievement level (1–5) for both Math and ELA.");
+        return;
+      }
       mathLevel = fastToLevel(mLvl);
       readLevel = fastToLevel(rLvl);
       mathWhy = `FAST Math Achievement Level ${mLvl} — ${FAST_LEVEL_DESCRIPTIONS[mLvl]}`;
@@ -340,6 +348,10 @@ export function PlacementGuide() {
                 className="bg-[#0D1B2E] text-[#C9A84C] text-xs font-bold px-5 py-2.5 rounded hover:opacity-90">
                 Build Student Plan →
               </button>
+
+              {formError && (
+                <p role="alert" className="mt-3 text-xs text-[#9B4E00] font-semibold">{formError}</p>
+              )}
             </div>
 
             {/* Result output */}
