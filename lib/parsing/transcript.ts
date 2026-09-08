@@ -180,9 +180,11 @@ function cleanCourseName(line: string): string {
   name = name.replace(/\b20\d{2}\s*[-/–]\s*(20)?\d{2}\b/g, " "); // year
   name = name.replace(/\b[0-2]\.\d{1,2}\b/g, " "); // decimal credits
   name = name.replace(/\b([A-DF][+-]?|\d{1,3}%)\s*$/g, " "); // trailing letter/percent grade
-  // Trailing bare numeric grade (40–100), matching GRADE_TOKEN's numeric range,
-  // so "Biology 88" -> "Biology". Course levels like "English 9" (< 40) are kept.
-  name = name.replace(/\b(100|[4-9]\d)\s*$/g, " ");
+  // Trailing bare numeric grade (40–99), so "Biology 88" -> "Biology". Course
+  // levels like "English 9" (< 40) are kept, and 100 is deliberately excluded so
+  // round college course numbers (e.g. "English 100") aren't eaten — a perfect
+  // score usually appears as "100%", already stripped above.
+  name = name.replace(/\b([4-9]\d)\s*$/g, " ");
   name = name.replace(/\b[A-Z]{2,4}\d{3,4}[A-Z]?\b/g, " "); // course codes like ENG101
   name = name.replace(/[|•·]+/g, " ");
   name = name.replace(/\s{2,}/g, " ").trim();

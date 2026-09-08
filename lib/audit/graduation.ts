@@ -96,7 +96,12 @@ export function runGraduationAudit(
   const totalCreditsEarned = transcript
     .filter((e) => !NON_FLORIDA_SUBJECT_AREAS.has(e.subject_area))
     .reduce((sum, e) => sum + Number(e.credit_value), 0);
-  const totalCreditsRemaining = Math.max(0, totalCreditsRequired - totalCreditsEarned);
+  // Remaining is the sum of per-subject shortfalls, NOT (required - earned):
+  // surplus credits in one area count toward the total earned but must not mask
+  // a shortfall in another (a student with extra English but no Math still needs
+  // the Math credits to graduate). This keeps "remaining" consistent with the
+  // per-subject deficiency list.
+  const totalCreditsRemaining = subjectAreas.reduce((sum, s) => sum + s.creditsRemaining, 0);
 
   const deficiencies = subjectAreas
     .filter((s) => !s.satisfied)
