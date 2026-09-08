@@ -7,6 +7,7 @@ import {
   SOCIAL_STUDIES_COURSES,
   FAST_MIN_GRADE,
   FAST_MAX_GRADE,
+  GRADE_3_READING_GATE_RIT,
   bibleCourseName,
   fastToLevel,
   type PlacementLevel,
@@ -35,12 +36,16 @@ function gradeNum(grade: GradeLevel): number {
 function latestScoreBySubject(
   scores: TestScore[],
   testType: string,
-  subjectPattern: RegExp
+  subjectPattern: RegExp,
+  valueKey: "score" | "proficiency_level"
 ): TestScore | null {
   let best: TestScore | null = null;
   for (const s of scores) {
     if (s.test_type !== testType) continue;
     if (!s.subject || !subjectPattern.test(s.subject)) continue;
+    // Only consider rows that actually carry the value we need, so a newer row
+    // with a blank score/level doesn't hide a valid older one.
+    if (s[valueKey] == null || s[valueKey] === "") continue;
     if (!best || s.test_date > best.test_date) best = s;
   }
   return best;
@@ -78,10 +83,10 @@ export function placeStudent(
   let readSource = "default";
   let readPercentile: number | null = null;
 
-  const mapMath = latestScoreBySubject(testScores, "MAP", /math/i);
-  const mapRead = latestScoreBySubject(testScores, "MAP", /read|ela/i);
-  const fastMath = latestScoreBySubject(testScores, "FAST", /math/i);
-  const fastRead = latestScoreBySubject(testScores, "FAST", /read|ela/i);
+  const mapMath = latestScoreBySubject(testScores, "MAP", /math/i, "score");
+  const mapRead = latestScoreBySubject(testScores, "MAP", /read|ela/i, "score");
+  const fastMath = latestScoreBySubject(testScores, "FAST", /math/i, "proficiency_level");
+  const fastRead = latestScoreBySubject(testScores, "FAST", /read|ela/i, "proficiency_level");
 
   const fastEligible = gNum >= FAST_MIN_GRADE && gNum <= FAST_MAX_GRADE;
 
@@ -130,6 +135,15 @@ export function placeStudent(
   if (mathSource === "default" && readSource === "default") {
     warnings.push(
       "No MAP or FAST scores available — all subjects defaulted to on-level. Upload test scores for accurate placement."
+    );
+  }
+
+  // Grade 3 is a reading-gate year in Florida: a grade-3 student reading below
+  // the independent grade-level RIT should be flagged for reading support even
+  // if MAP norms alone place them "on-level".
+  if (gNum === 3 && mapRead?.score != null && mapRead.score < GRADE_3_READING_GATE_RIT) {
+    warnings.push(
+      `Grade 3 reading gate: MAP Reading RIT ${mapRead.score} is below the grade-level independent-reading benchmark (${GRADE_3_READING_GATE_RIT}). Reading intervention/monitoring is recommended regardless of tier.`
     );
   }
 

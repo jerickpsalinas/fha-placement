@@ -21,6 +21,13 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+/** Case-insensitive month index (-1 if unrecognized), so a module stored as
+ *  "august" still sorts into calendar order. */
+function monthIndex(name: string): number {
+  const lower = name.toLowerCase();
+  return MONTHS.findIndex((m) => m.toLowerCase() === lower);
+}
+
 /**
  * Recommends STEAM modules for a student, matched to their grade band. Modules
  * scheduled for the current calendar month are surfaced first (that's what the
@@ -53,7 +60,7 @@ export function recommendSteamModules(
   // Current-month modules first, then by calendar month order.
   recs.sort((a, b) => {
     if (a.currentMonth !== b.currentMonth) return a.currentMonth ? -1 : 1;
-    return MONTHS.indexOf(a.module.month) - MONTHS.indexOf(b.module.month);
+    return monthIndex(a.module.month) - monthIndex(b.module.month);
   });
 
   return recs;

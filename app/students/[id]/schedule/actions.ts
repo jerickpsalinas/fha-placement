@@ -128,12 +128,21 @@ export async function generateAndCreateSchedule(studentId: string, schoolYear: s
 
 export async function addScheduleBlock(scheduleId: string, studentId: string, formData: FormData) {
   const staff = await getCurrentStaff();
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
+    throw new Error("Not authorized to edit schedules.");
+  }
   const supabase = await createClient();
+
+  const blockLabel = String(formData.get("block_label") ?? "").trim();
+  const courseName = String(formData.get("course_name") ?? "").trim();
+  if (!blockLabel || !courseName) {
+    throw new Error("Block label and course name are required.");
+  }
 
   const { error } = await supabase.from("schedule_blocks").insert({
     schedule_id: scheduleId,
-    block_label: String(formData.get("block_label") ?? ""),
-    course_name: String(formData.get("course_name") ?? ""),
+    block_label: blockLabel,
+    course_name: courseName,
     course_category: String(formData.get("course_category") ?? "core"),
     is_online: formData.get("is_online") === "on",
     notes: formData.get("notes") || null,
@@ -146,14 +155,25 @@ export async function addScheduleBlock(scheduleId: string, studentId: string, fo
 
 export async function submitForApproval(scheduleId: string, studentId: string) {
   const staff = await getCurrentStaff();
+  if (!["admin", "director", "counselor"].includes(staff.role)) {
+    throw new Error("Not authorized to submit schedules.");
+  }
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // Only a draft may be submitted — don't let an approved/rejected schedule be
+  // silently reverted to pending. .eq("status","draft") makes the transition
+  // a no-op unless the row is currently a draft.
+  const { data: updated, error } = await supabase
     .from("schedules")
-    .update({ status: "pending_approval" })
-    .eq("id", scheduleId);
+    .update({ status: "pending_approval", updated_at: new Date().toISOString() })
+    .eq("id", scheduleId)
+    .eq("status", "draft")
+    .select("id");
 
   if (error) throw new Error(error.message);
+  if (!updated || updated.length === 0) {
+    throw new Error("Only a draft schedule can be submitted for approval.");
+  }
   await logAudit({ staffId: staff.id, studentId, action: "submit_for_approval", tableName: "schedules", recordId: scheduleId });
   redirect(`/students/${studentId}/schedule/${scheduleId}`);
 }
@@ -181,7 +201,7 @@ export async function approveSchedule(scheduleId: string, studentId: string, adm
 
   const { error } = await supabase
     .from("schedules")
-    .update({ status: "approved", admin_notes: merged })
+    .update({ status: "approved", admin_notes: merged, updated_at: new Date().toISOString() })
     .eq("id", scheduleId);
 
   if (error) throw new Error(error.message);
@@ -198,7 +218,7 @@ export async function rejectSchedule(scheduleId: string, studentId: string, reas
 
   const { error } = await supabase
     .from("schedules")
-    .update({ status: "rejected", rejection_reason: reason })
+    .update({ status: "rejected", rejection_reason: reason, updated_at: new Date().toISOString() })
     .eq("id", scheduleId);
 
   if (error) throw new Error(error.message);

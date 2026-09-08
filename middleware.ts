@@ -45,8 +45,16 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect logged-in users away from /login, but NOT from /auth/reset-password
-  // (they may have clicked a password-reset email while already logged in)
-  if (user && request.nextUrl.pathname.startsWith("/login")) {
+  // (they may have clicked a password-reset email while already logged in), and
+  // NOT when /login carries an ?error (e.g. account_deactivated): a user whose
+  // profile is missing/inactive still holds a valid session, so bouncing them to
+  // /dashboard would loop forever and never surface the error. Letting them land
+  // on /login lets the page show the message and clear the stuck session.
+  if (
+    user &&
+    request.nextUrl.pathname.startsWith("/login") &&
+    !request.nextUrl.searchParams.has("error")
+  ) {
     return NextResponse.redirect(new URL("/dashboard", origin));
   }
 

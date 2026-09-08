@@ -163,7 +163,7 @@ export async function logAudit(params: {
   details?: Record<string, unknown>;
 }) {
   const supabase = await createClient();
-  await supabase.from("audit_log").insert({
+  const { error } = await supabase.from("audit_log").insert({
     staff_id: params.staffId,
     student_id: params.studentId ?? null,
     action: params.action,
@@ -171,4 +171,14 @@ export async function logAudit(params: {
     record_id: params.recordId ?? null,
     details: params.details ?? {},
   });
+  // An audit-write failure must not break the user's action, but it should not
+  // be silently swallowed either — surface it in the server logs.
+  if (error) {
+    console.error("Failed to write audit_log entry", {
+      action: params.action,
+      tableName: params.tableName,
+      recordId: params.recordId ?? null,
+      error: error.message,
+    });
+  }
 }

@@ -1,31 +1,24 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createSupportPlan } from "./actions";
-import { DocumentUpload } from "./DocumentUpload";
-import type { PlanType } from "@/types";
-
-interface NewPlan {
-  id: string;
-  plan_type: PlanType;
-  effective_date: string | null;
-  review_date: string | null;
-}
 
 interface Props {
   studentId: string;
 }
 
 export function AddSupportPlan({ studentId }: Props) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [newPlans, setNewPlans] = useState<NewPlan[]>([]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
 
     startTransition(async () => {
       const result = await createSupportPlan(fd);
@@ -33,32 +26,17 @@ export function AddSupportPlan({ studentId }: Props) {
         setError(result.error);
         return;
       }
-      const planType = fd.get("planType") as PlanType;
-      const effectiveDate = (fd.get("effectiveDate") as string) || null;
-      const reviewDate = (fd.get("reviewDate") as string) || null;
-      setNewPlans((prev) => [
-        ...prev,
-        { id: result.id!, plan_type: planType, effective_date: effectiveDate, review_date: reviewDate },
-      ]);
       setOpen(false);
-      (e.target as HTMLFormElement).reset();
+      form.reset();
+      // The server action revalidated the page — pull the fresh server-rendered
+      // plan list (which renders each plan with its own upload control) rather
+      // than tracking new plans client-side, which would double-render them.
+      router.refresh();
     });
   }
 
   return (
     <div className="mt-4">
-      {/* Newly created plans rendered client-side (page revalidates on next full load) */}
-      {newPlans.map((plan) => (
-        <div key={plan.id} className="border border-gray-200 rounded p-4 mb-3">
-          <p className="font-medium text-sm mb-2">
-            {plan.plan_type} Plan
-            {plan.effective_date ? ` — effective ${plan.effective_date}` : ""}
-          </p>
-          <p className="text-xs text-gray-400">No accommodations added yet.</p>
-          <DocumentUpload planId={plan.id} studentId={studentId} existingPath={null} />
-        </div>
-      ))}
-
       {open ? (
         <form
           onSubmit={handleSubmit}

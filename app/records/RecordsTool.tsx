@@ -187,7 +187,11 @@ export function RecordsTool() {
             {/* Step 2: Upload */}
             <div className="bg-white border border-[#DDD8CC] rounded-lg p-6">
               <div className="text-[10px] font-bold uppercase tracking-wide text-[#777] mb-3">Step 2 — Upload Document</div>
-              <div className="border-2 border-dashed border-[#DDD8CC] rounded-lg p-8 text-center">
+              <div
+                className="border-2 border-dashed border-[#DDD8CC] rounded-lg p-8 text-center"
+                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setFile(f); }}
+                onDragOver={(e) => e.preventDefault()}
+              >
                 <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                   className="hidden" id="file-input" />
@@ -275,14 +279,25 @@ function StatRow({ items }: { items: [string | number, string, string][] }) {
   );
 }
 
-function NextSteps({ items }: { items: string[] }) {
+/**
+ * Renders a "Next Steps" panel. `items` may contain the app's own trusted
+ * markup (e.g. hardcoded `<strong>` labels), so those are rendered as HTML.
+ * Set `plain` for any content that originates from an uploaded document / the
+ * extraction model — that text has no intended markup and must NOT be injected
+ * as HTML (XSS). Plain items render as inert text.
+ */
+function NextSteps({ items, plain = false }: { items: string[]; plain?: boolean }) {
   return (
     <div className="bg-[#0D1B2E] rounded-lg p-4">
       <div className="text-[10px] font-bold uppercase tracking-wide text-[#C9A84C] mb-2">Next Steps</div>
       <div className="space-y-2">
-        {items.map((item, i) => (
-          <div key={i} className="text-[11px] text-white/70 border-b border-white/10 pb-1.5" dangerouslySetInnerHTML={{ __html: item }} />
-        ))}
+        {items.map((item, i) =>
+          plain ? (
+            <div key={i} className="text-[11px] text-white/70 border-b border-white/10 pb-1.5">{item}</div>
+          ) : (
+            <div key={i} className="text-[11px] text-white/70 border-b border-white/10 pb-1.5" dangerouslySetInnerHTML={{ __html: item }} />
+          )
+        )}
       </div>
     </div>
   );
@@ -560,7 +575,7 @@ function StateResult({ data }: { data: Record<string, unknown> }) {
         </div>
       )}
       <SchedBlock grade={grade} mathLvl={isMath ? mapLvl : "On-Level"} readLvl={isEla ? mapLvl : "On-Level"} source={`${data.assessmentName || "State Assessment"} Level ${lvl ?? "—"}`} />
-      {data.nextSteps && <NextSteps items={[data.nextSteps as string]} />}
+      {data.nextSteps && <NextSteps items={[data.nextSteps as string]} plain />}
     </>
   );
 }

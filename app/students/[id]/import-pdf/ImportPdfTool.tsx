@@ -24,9 +24,11 @@ export function ImportPdfTool() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function processFile(file: File) {
+    if (file.type && file.type !== "application/pdf") {
+      setStatus("Please choose a PDF file.");
+      return;
+    }
     setFileName(file.name);
     setStatus(null);
     setSaved(false);
@@ -52,6 +54,21 @@ export function ImportPdfTool() {
     } finally {
       setExtracting(false);
     }
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Reset so re-selecting the same file fires onChange again.
+    e.target.value = "";
+    if (!file) return;
+    await processFile(file);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    if (extracting) return;
+    const file = e.dataTransfer.files?.[0];
+    if (file) void processFile(file);
   }
 
   function updateRow(i: number, patch: Partial<ParsedTranscriptRow>) {
@@ -107,7 +124,11 @@ export function ImportPdfTool() {
 
         <div>
           <label className="block text-[10px] font-semibold text-navy mb-1">Transcript / Report Card PDF</label>
-          <div className="border-2 border-dashed border-hairline rounded-lg p-6 text-center">
+          <div
+            className="border-2 border-dashed border-hairline rounded-lg p-6 text-center"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
             <input type="file" accept="application/pdf,.pdf" onChange={handleFile} className="hidden" id="pdf-file-input" disabled={extracting} />
             <label htmlFor="pdf-file-input" className={extracting ? "cursor-wait" : "cursor-pointer"}>
               <div className="text-sm text-navy/60">
@@ -154,7 +175,11 @@ export function ImportPdfTool() {
                         </select>
                       </td>
                       <td className="px-1 py-1">
-                        <input type="number" step="0.25" value={r.credit_value} onChange={(e) => updateRow(i, { credit_value: Number(e.target.value) })}
+                        <input type="number" step="0.25" min="0" value={r.credit_value}
+                          onChange={(e) => {
+                            const n = parseFloat(e.target.value);
+                            updateRow(i, { credit_value: Number.isFinite(n) && n >= 0 ? n : 0 });
+                          }}
                           className="w-16 border border-hairline rounded px-1.5 py-1" />
                       </td>
                       <td className="px-1 py-1">

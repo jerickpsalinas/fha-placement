@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { listStudents, listPendingApprovals } from "@/lib/queries";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import type { StaffProfile } from "@/types";
 
 async function getStaffSafe(): Promise<
@@ -43,26 +44,28 @@ export default async function DashboardPage() {
 
   if (!result.ok) {
     if (result.redirect) redirect(result.redirect);
+    // Log the diagnostic detail server-side; never render internal error
+    // messages, codes, or user ids to the browser.
+    console.error("[dashboard] failed to load staff profile:", result.error);
     return (
-      <div style={{ fontFamily: "monospace", padding: "2rem" }}>
-        <div style={{ background: "red", color: "white", padding: "1rem", borderRadius: "6px", marginBottom: "1rem", fontWeight: "bold", fontSize: "1.1rem" }}>
-          Dashboard failed to load — server error
+      <div className="min-h-screen flex items-center justify-center p-8 bg-cream">
+        <div className="max-w-md rounded-lg border border-hairline bg-white p-6 text-center">
+          <h1 className="text-lg font-bold text-navy font-serif mb-2">Dashboard unavailable</h1>
+          <p className="text-sm text-navy/60">
+            We couldn&apos;t load your dashboard right now. Please try again in a moment, or
+            contact your administrator if this keeps happening.
+          </p>
         </div>
-        <pre style={{ background: "#1e1e1e", color: "#f8f8f2", padding: "1rem", borderRadius: "6px", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-          {result.error}
-        </pre>
-        <p style={{ marginTop: "1rem", color: "#555" }}>
-          Check your Supabase environment variables and that a staff_profiles row exists for this user.
-        </p>
       </div>
     );
   }
 
   const { staff } = result;
+  const isAdmin = staff.role === "admin" || staff.role === "director";
 
   const [studentsResult, pendingResult] = await Promise.allSettled([
     listStudents(),
-    staff.role === "admin" ? listPendingApprovals() : Promise.resolve([]),
+    isAdmin ? listPendingApprovals() : Promise.resolve([]),
   ]);
 
   const students = studentsResult.status === "fulfilled" ? studentsResult.value : [];
@@ -99,19 +102,19 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {staff.role === "admin" && (
+          {isAdmin && (
             <section>
               <h2 className="text-[10px] font-bold uppercase tracking-wide text-navy mb-3">Schedules Pending Approval</h2>
               {pendingError ? (
                 <div className="rounded-lg border border-intervention/30 bg-intervention-bg p-4 text-sm text-intervention">
-                  Couldn&apos;t load pending approvals: {pendingError}
+                  Couldn&apos;t load pending approvals right now. Please try again shortly.
                 </div>
               ) : pending.length === 0 ? (
                 <p className="text-sm text-navy/50">Nothing pending approval right now.</p>
               ) : (
                 <Card className="divide-y divide-hairline overflow-hidden">
                   {pending.map((sch) => (
-                    <a
+                    <Link
                       key={sch.id}
                       href={`/students/${sch.student_id}/schedule/${sch.id}`}
                       className="flex items-center justify-between px-4 py-3 hover:bg-cream"
@@ -120,7 +123,7 @@ export default async function DashboardPage() {
                         {sch.students.first_name} {sch.students.last_name} — Grade {sch.students.grade_level}
                       </span>
                       <span className="text-xs text-gold font-bold uppercase">Review &rarr;</span>
-                    </a>
+                    </Link>
                   ))}
                 </Card>
               )}

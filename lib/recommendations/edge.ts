@@ -12,21 +12,28 @@ export interface EdgeRecommendation {
  * was suggested and confirm or reject it — recommendations never auto-enroll
  * a student.
  */
+/** Whole-word match against free-text goals, so "law" doesn't match "flawless"
+ *  and "own" doesn't match "known"/"downtown". */
+function goalHasWord(goals: string, word: string): boolean {
+  return new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(goals);
+}
+
 export function recommendEdgePathways(student: Student): EdgeRecommendation[] {
   const recommendations: EdgeRecommendation[] = [];
   const interests = (student.edge_interests ?? []).map((i) => i.toLowerCase());
   const goals = `${student.career_goals ?? ""} ${student.college_goals ?? ""}`.toLowerCase();
+  const hasGoal = (word: string) => goalHasWord(goals, word);
   const gradeNum = student.grade_level === "K" ? 0 : parseInt(student.grade_level, 10);
 
   const matchers: { pathway: EdgePathway; test: () => boolean; reason: string }[] = [
     {
       pathway: "quickbooks_certification",
-      test: () => interests.includes("accounting") || interests.includes("bookkeeping") || goals.includes("accounting") || goals.includes("finance"),
+      test: () => interests.includes("accounting") || interests.includes("bookkeeping") || hasGoal("accounting") || hasGoal("finance"),
       reason: "Stated interest or goal related to accounting/finance",
     },
     {
       pathway: "entrepreneurship",
-      test: () => interests.includes("entrepreneurship") || goals.includes("start") && goals.includes("business"),
+      test: () => interests.includes("entrepreneurship") || hasGoal("start") && hasGoal("business"),
       reason: "Stated interest in entrepreneurship or starting a business",
     },
     {
@@ -36,7 +43,7 @@ export function recommendEdgePathways(student: Student): EdgeRecommendation[] {
     },
     {
       pathway: "public_speaking",
-      test: () => interests.includes("public speaking") || interests.includes("leadership") || goals.includes("law") || goals.includes("politics"),
+      test: () => interests.includes("public speaking") || interests.includes("leadership") || hasGoal("law") || hasGoal("politics"),
       reason: "Stated interest in public speaking/leadership or related career goal",
     },
     {
@@ -71,7 +78,7 @@ export function recommendEdgePathways(student: Student): EdgeRecommendation[] {
     },
     {
       pathway: "business_ownership",
-      test: () => goals.includes("own") && goals.includes("business"),
+      test: () => hasGoal("own") && hasGoal("business"),
       reason: "Stated goal of business ownership",
     },
     {

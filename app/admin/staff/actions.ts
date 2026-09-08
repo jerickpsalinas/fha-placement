@@ -41,15 +41,21 @@ export async function createStaffMember(formData: FormData) {
     throw new Error(createError?.message ?? "Failed to create user.");
   }
 
-  const supabase = await createServerClient();
-  const { error: profileError } = await supabase.from("staff_profiles").insert({
+  // Insert the profile with the same admin (service-role) client that created
+  // the auth user, so it doesn't depend on an exact RLS INSERT policy. If the
+  // profile insert fails, roll back the orphaned auth user so it can't linger
+  // as a login with no profile (which would be stuck at the login screen).
+  const { error: profileError } = await adminClient.from("staff_profiles").insert({
     id: created.user.id,
     full_name: fullName,
     role,
     active: true,
   });
 
-  if (profileError) throw new Error(profileError.message);
+  if (profileError) {
+    await adminClient.auth.admin.deleteUser(created.user.id);
+    throw new Error(`Failed to create staff profile: ${profileError.message}`);
+  }
 }
 
 export async function deactivateStaffMember(staffId: string) {
@@ -65,6 +71,11 @@ export async function deactivateStaffMember(staffId: string) {
 export async function updateStaffRole(staffId: string, role: StaffRole) {
   const staff = await getCurrentStaff();
   if (staff.role !== "admin" && staff.role !== "director") throw new Error("Only an administrator can change staff roles.");
+  // Guard against an admin/director demoting themselves and losing admin access
+  // (which could lock the last administrator out of the staff-management tools).
+  if (staffId === staff.id && role !== "admin" && role !== "director") {
+    throw new Error("You cannot remove your own administrator access.");
+  }
 
   const supabase = await createServerClient();
   const { error } = await supabase.from("staff_profiles").update({ role }).eq("id", staffId);
